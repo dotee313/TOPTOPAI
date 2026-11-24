@@ -96,6 +96,20 @@ textarea.f{direction:rtl;text-align:start;min-height:70px}
 #more .btn{width:100%;margin-top:8px;text-align:start}
 #more .btn.warn{color:var(--danger)}
 .links a{color:var(--accent);margin-inline-end:12px}
+[hidden]{display:none!important}
+dialog#dlg{max-height:90vh;overflow:auto}
+.warn-box{background:var(--user);border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.6;margin-top:8px}
+#atts{max-width:760px;margin:0 auto 6px;display:flex;flex-wrap:wrap;gap:6px}
+#atts:empty{display:none}
+.att{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px 8px;font-size:13px;max-width:220px}
+.att img{width:36px;height:36px;object-fit:cover;border-radius:8px}
+.att span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:ltr}
+.att button{color:var(--muted);padding:0 4px}
+#attach{width:42px;height:42px;border-radius:12px;font-size:20px;display:grid;place-items:center;flex-shrink:0;color:var(--muted)}
+#attach:hover{background:var(--bg)}
+.files{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.files img{max-width:180px;max-height:140px;border-radius:10px;border:1px solid var(--line)}
+.fchip{font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 10px;direction:ltr}
 </style>
 </head>
 <body>
@@ -109,7 +123,9 @@ textarea.f{direction:rtl;text-align:start;min-height:70px}
 <main id="main">
   <div id="top"><button id="menu" aria-label="القائمة">☰</button><div class="title" id="ttl">محادثة جديدة</div><span id="agentChip" class="chip"></span><button id="moreBtn" class="btn ghost sm" aria-label="المزيد">⋯</button></div>
   <div id="msgs"><div class="wrap" id="wrap"></div></div>
-  <div id="bar"><div id="box">
+  <div id="bar"><div id="atts"></div><div id="box">
+    <button id="attach" type="button" aria-label="إرفاق ملف أو صورة" title="إرفاق ملف أو صورة">📎</button>
+    <input id="file" type="file" multiple hidden accept="image/*,application/pdf,text/*,.md,.json,.csv,.js,.ts,.py,.html,.css,.xml,.yml,.yaml,.java,.c,.cpp,.cs,.go,.rs,.php,.sh,.sql">
     <textarea id="in" rows="1" placeholder="اكتب رسالتك…" aria-label="الرسالة"></textarea>
     <button id="send" aria-label="إرسال">↑</button>
   </div></div>
@@ -128,11 +144,14 @@ textarea.f{direction:rtl;text-align:start;min-height:70px}
   <select id="prov" class="f"></select>
   <label for="url">عنوان API</label>
   <input id="url" class="f" autocomplete="off">
-  <label for="key">مفتاح API</label>
+  <label for="key" id="keyLbl">مفتاح API</label>
   <input id="key" class="f" type="password" autocomplete="off" placeholder="sk-…">
-  <label for="model">النموذج</label>
+  <div id="modelBox"><label for="model">النموذج</label>
   <input id="model" class="f" autocomplete="off" list="models">
-  <datalist id="models"></datalist>
+  <datalist id="models"></datalist></div>
+  <div id="freeBox" hidden><label for="freeSel">النموذج المجاني</label>
+  <select id="freeSel" class="f"></select>
+  <div class="warn-box">⚠️ النماذج المجانية قد تكون لها حدود استخدام (عدد الطلبات/الحجم) وشروط خدمة خاصة بالمزوّد، وقد تتغير أو تُسحب في أي وقت. قد تطلب البوابة مفتاح AI Gateway (يُنشأ مجاناً من حسابك في Vercel) ويُدخل في حقل المفتاح أعلاه. مفاتيحك الأخرى (OpenAI وغيرها) تبقى محفوظة منفصلة ولا تُرسل إلى هذه البوابة. النماذج غير المدمجة قد لا تدعم الصور.</div></div>
   <div style="margin-top:6px"><button class="btn ghost sm" id="getModels" type="button">جلب قائمة النماذج</button></div>
   <label for="temp">الإبداعية (0 دقيق ← 2 مبدع): <span id="tv"></span></label>
   <input id="temp" class="f" type="range" min="0" max="2" step="0.1">
@@ -145,16 +164,23 @@ textarea.f{direction:rtl;text-align:start;min-height:70px}
 
 <script>
 const $=s=>document.querySelector(s);
+const FREE={url:"https://ai-gateway.vercel.sh/v1",models:[
+ {id:"minimax/minimax-m3-free",n:"MiniMax M3 (مجاني)"},
+ {id:"nvidia/nemotron-3.5-lightning-free",n:"NVIDIA Nemotron 3.5 Lightning (مجاني)"}
+]};
 const PROVIDERS={
  openai:{n:"OpenAI",u:"https://api.openai.com/v1",m:"gpt-4o-mini"},
  openrouter:{n:"OpenRouter (نماذج كثيرة)",u:"https://openrouter.ai/api/v1",m:"openai/gpt-4o-mini"},
  groq:{n:"Groq",u:"https://api.groq.com/openai/v1",m:"llama-3.3-70b-versatile"},
  gemini:{n:"Google Gemini",u:"https://generativelanguage.googleapis.com/v1beta/openai",m:"gemini-2.0-flash"},
  ollama:{n:"Ollama (محلي)",u:"http://localhost:11434/v1",m:"llama3.2"},
+ free:{n:"نماذج مجانية (Vercel AI Gateway)",u:FREE.url,m:FREE.models[0].id},
  custom:{n:"مخصص (متوافق مع OpenAI)",u:"",m:""}
 };
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 let cfg=Object.assign({prov:"openrouter",url:PROVIDERS.openrouter.u,key:"",model:PROVIDERS.openrouter.m,sys:"",temp:0.7},store.get("tt_cfg",{}));
+cfg.keys=cfg.keys||{[cfg.prov]:cfg.key||""};
+let pending=[];
 let draftAgent=store.get("tt_agent","general");
 let chats=store.get("tt_chats",[]);
 let cur=store.get("tt_cur",null);
@@ -206,7 +232,8 @@ function md(src){
   return block(p);
  }).join("");
 }
-const save=()=>{store.set("tt_chats",chats);store.set("tt_cur",cur)};
+const slim=c=>({...c,msgs:c.msgs.map(m=>m.files?{...m,files:m.files.map(f=>({type:f.type,mediaType:f.mediaType,filename:f.filename}))}:m)});
+const save=()=>{store.set("tt_chats",chats.map(slim));store.set("tt_cur",cur)};
 const getChat=()=>chats.find(c=>c.id===cur);
 const agentOf=c=>AGENTS[(c&&c.agent)||draftAgent]||AGENTS.general;
 function newChat(){
@@ -226,7 +253,14 @@ function renderList(){
 function bubble(m,live,last){
  const d=document.createElement("div");d.className="msg "+(m.role==="user"?"user":"ai")+(m.err?" err":"");
  const b=document.createElement("div");b.className="b";
- if(m.role==="user")b.textContent=m.content;else{b.innerHTML=md(m.content||"");if(live)b.classList.add("cursor")}
+ if(m.role==="user"){
+  if(m.files?.length){const fs=document.createElement("div");fs.className="files";
+   m.files.forEach(f=>{const img=f.mediaType.startsWith("image/");
+    if(f.url&&img){const im=document.createElement("img");im.src=f.url;im.alt=f.filename||"";fs.appendChild(im)}
+    else{const sp=document.createElement("span");sp.className="fchip";sp.textContent=(img?"🖼 ":"📄 ")+(f.filename||"file");fs.appendChild(sp)}});
+   b.appendChild(fs)}
+  if(m.content){const t=document.createElement("div");t.textContent=m.content;b.appendChild(t)}
+ }else{b.innerHTML=md(m.content||"");if(live)b.classList.add("cursor")}
  d.appendChild(b);
  if(m.role!=="user"&&!live){
   const a=document.createElement("div");a.className="acts";
@@ -240,7 +274,7 @@ function render(){
  const ag=agentOf(c);
  $("#ttl").textContent=c?c.title:"محادثة جديدة";$("#agentChip").textContent=ag.n;
  if(!c||!c.msgs.length){
-  const ready=cfg.key||cfg.prov==="ollama";
+  const ready=cfg.key||cfg.prov==="ollama"||cfg.prov==="free";
   w.innerHTML=`<div class="empty"><h1>كيف أساعدك اليوم؟</h1><p>${ready?"اختر مساعداً ثم اكتب رسالتك.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p><div class="agents">${Object.entries(AGENTS).map(([k,a])=>`<button class="agent${(c?c.agent:draftAgent)===k?" on":""}" data-ag="${k}"><b>${a.n}</b><span>${a.d}</span></button>`).join("")}</div></div>`;return}
  c.msgs.forEach((m,i)=>bubble(m,false,i===c.msgs.length-1&&m.role!=="user"));scrollDown();
 }
@@ -252,13 +286,14 @@ async function run(c){
  render();const el=bubble(ai,true);scrollDown();
  ctrl=new AbortController();setBusy(true);
  const sys=[agentOf(c).p,cfg.sys].filter(Boolean).join("\n\n");
- const msgs=[{role:"system",content:sys},...c.msgs.filter(m=>!m.err).map(m=>({role:m.role,content:m.content}))];
+ let msgs;
  try{
+  msgs=[{role:"system",content:sys},...await toApi(c.msgs.filter(m=>!m.err))];
   const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",signal:ctrl.signal,
    headers:{"Content-Type":"application/json",...(cfg.key?{Authorization:"Bearer "+cfg.key}:{})},
    body:JSON.stringify({model:cfg.model,messages:msgs,stream:true,temperature:Number(cfg.temp)})});
   if(!r.ok){let t="";try{const j=await r.json();t=j.error?.message||j[0]?.error?.message||""}catch{}
-   throw new Error(r.status===401?"المفتاح غير صحيح أو منتهي. راجع الإعدادات.":r.status===429?"تجاوزت الحد المسموح أو لا يوجد رصيد. جرّب لاحقاً أو غيّر النموذج.":`خطأ ${r.status}${t?": "+t:""}`)}
+   throw new Error(r.status===401?(cfg.prov==="free"?"هذه البوابة تتطلب مفتاح AI Gateway. أنشئ مفتاحاً مجانياً من حسابك في Vercel وأدخله في الإعدادات، أو استخدم مفتاحك الخاص مع مزوّد آخر.":"المفتاح غير صحيح أو منتهي. راجع الإعدادات."):r.status===429?(cfg.prov==="free"?"وصلت إلى حد استخدام النماذج المجانية. انتظر قليلاً أو جرّب نموذجاً آخر.":"تجاوزت الحد المسموح أو لا يوجد رصيد. جرّب لاحقاً أو غيّر النموذج."):`خطأ ${r.status}${t?": "+t:""}`)}
   const rd=r.body.getReader(),dec=new TextDecoder();let buf="";
   for(;;){
    const {done,value}=await rd.read();if(done)break;
@@ -275,13 +310,61 @@ async function run(c){
   else{c.msgs.push({role:"assistant",content:e instanceof TypeError?"تعذّر الاتصال. تحقق من الإنترنت ومن عنوان API.":e.message,err:true})}
  }finally{ctrl=null;setBusy(false);save();render()}
 }
+/* ===== المرفقات (بنفس شكل FileUIPart في Vercel AI SDK: {type:"file", mediaType, filename, url}) ===== */
+const TEXT_EXT=/\.(txt|md|json|csv|tsv|log|xml|html?|css|js|jsx|ts|tsx|py|java|c|cpp|h|cs|go|rs|php|rb|sh|sql|ya?ml|toml|ini|kt|swift)$/i;
+const readUrl=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
+function imgToDataUrl(file){return new Promise((res,rej)=>{
+ const u=URL.createObjectURL(file),im=new Image();
+ im.onload=()=>{const M=1568;let w=im.naturalWidth,h=im.naturalHeight;const k=Math.min(1,M/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+  const cv=document.createElement("canvas");cv.width=w;cv.height=h;const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
+  URL.revokeObjectURL(u);res(cv.toDataURL("image/jpeg",0.85))};
+ im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
+async function addFiles(list){
+ for(const f of list){
+  if(pending.length>=5){alert("الحد الأقصى 5 مرفقات للرسالة الواحدة.");break}
+  try{
+   if(f.type.startsWith("image/"))pending.push({type:"file",mediaType:"image/jpeg",filename:f.name,url:await imgToDataUrl(f)});
+   else if(f.type==="application/pdf"){if(f.size>5e6){alert("ملف PDF أكبر من 5MB: "+f.name);continue}pending.push({type:"file",mediaType:"application/pdf",filename:f.name,url:await readUrl(f)})}
+   else if(f.type.startsWith("text/")||f.type==="application/json"||TEXT_EXT.test(f.name)){let t=await f.text();if(t.length>2e5)t=t.slice(0,2e5)+"\n…(اقتُطع النص لطول الملف)";pending.push({type:"file",mediaType:"text/plain",filename:f.name,url:"data:text/plain;charset=utf-8,"+encodeURIComponent(t)})}
+   else alert("نوع الملف غير مدعوم: "+f.name)
+  }catch{alert("تعذّرت قراءة: "+f.name)}
+ }
+ renderAtts();
+}
+function renderAtts(){
+ const box=$("#atts");box.innerHTML="";
+ pending.forEach((f,i)=>{
+  const d=document.createElement("div");d.className="att";
+  if(f.mediaType.startsWith("image/")){const im=document.createElement("img");im.src=f.url;im.alt="";d.appendChild(im)}
+  const sp=document.createElement("span");sp.textContent=(f.mediaType.startsWith("image/")?"":"📄 ")+(f.filename||"file");d.appendChild(sp);
+  const x=document.createElement("button");x.type="button";x.textContent="✕";x.setAttribute("aria-label","إزالة المرفق");x.onclick=()=>{pending.splice(i,1);renderAtts()};d.appendChild(x);
+  box.appendChild(d);
+ });
+}
+/* تحويل رسائل المحادثة إلى صيغة OpenAI المتوافقة (نص + image_url + file) */
+async function toApi(list){
+ const out=[];
+ for(const m of list){
+  if(m.role!=="user"||!m.files?.length){out.push({role:m.role,content:m.content});continue}
+  let text=m.content||"";const parts=[];
+  for(const f of m.files){
+   if(!f.url){text+="\n[مرفق سابق غير متاح بعد إعادة تحميل الصفحة: "+(f.filename||"")+"]";continue}
+   if(f.mediaType.startsWith("image/"))parts.push({type:"image_url",image_url:{url:f.url}});
+   else if(f.mediaType==="application/pdf")parts.push({type:"file",file:{filename:f.filename||"file.pdf",file_data:f.url}});
+   else{const t=await (await fetch(f.url)).text();text+="\n\n[ملف: "+f.filename+"]\n```\n"+t+"\n```"}
+  }
+  out.push({role:"user",content:parts.length?[{type:"text",text:text||"(مرفق)"},...parts]:text});
+ }
+ return out;
+}
 async function send(){
  if(ctrl){ctrl.abort();return}
- const inp=$("#in");const text=inp.value.trim();if(!text)return;
- if(!cfg.key&&cfg.prov!=="ollama"){openSettings();return}
+ const inp=$("#in");const text=inp.value.trim();if(!text&&!pending.length)return;
+ if(!cfg.key&&cfg.prov!=="ollama"&&cfg.prov!=="free"){openSettings();return}
  const c=getChat()||newChat();
- c.msgs.push({role:"user",content:text});
- if(c.msgs.length===1)c.title=text.slice(0,40);
+ const um={role:"user",content:text};if(pending.length){um.files=pending;pending=[];renderAtts()}
+ c.msgs.push(um);
+ if(c.msgs.length===1)c.title=(text||um.files[0].filename||"مرفق").slice(0,40);
  inp.value="";inp.style.height="auto";save();run(c);
 }
 function redo(){
@@ -291,14 +374,27 @@ function redo(){
 }
 const chatText=c=>`${c.title}\n\n`+c.msgs.map(m=>(m.role==="user"?"أنا: ":agentOf(c).n+": ")+m.content).join("\n\n");
 
+let kmap={},shown="";
+function fillFree(list,sel){
+ const L=[...list];if(sel&&!L.some(m=>m.id===sel))L.unshift({id:sel,n:sel});
+ $("#freeSel").innerHTML=L.map(m=>`<option value="${esc(m.id)}">${esc(m.n)}</option>`).join("");
+ if(sel)$("#freeSel").value=sel;
+}
+function syncProvUI(){
+ const free=$("#prov").value==="free";
+ $("#freeBox").hidden=!free;$("#modelBox").hidden=free;
+ $("#keyLbl").textContent=free?"مفتاح AI Gateway (اختياري إن قبلت الخدمة بدونه)":"مفتاح API";
+}
 function openSettings(){
  const p=$("#prov");p.innerHTML=Object.entries(PROVIDERS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join("");
- p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=cfg.key;$("#model").value=cfg.model;$("#sys").value=cfg.sys;
+ kmap={...(cfg.keys||{}),[cfg.prov]:cfg.key};shown=cfg.prov;
+ p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=kmap[shown]||"";$("#model").value=cfg.model;$("#sys").value=cfg.sys;
+ fillFree(FREE.models,cfg.prov==="free"?cfg.model:FREE.models[0].id);syncProvUI();
  $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;
  $("#dlg").showModal();
 }
 $("#temp").oninput=e=>$("#tv").textContent=e.target.value;
-$("#prov").onchange=e=>{const v=PROVIDERS[e.target.value];$("#url").value=v.u;$("#model").value=v.m;$("#models").innerHTML=""};
+$("#prov").onchange=e=>{kmap[shown]=$("#key").value.trim();shown=e.target.value;$("#key").value=kmap[shown]||"";const v=PROVIDERS[shown];$("#url").value=v.u;$("#model").value=v.m;$("#models").innerHTML="";if(shown==="free")fillFree(FREE.models,FREE.models[0].id);syncProvUI()};
 $("#getModels").onclick=async()=>{
  const b=$("#getModels");b.textContent="جارٍ الجلب…";
  try{
@@ -306,16 +402,27 @@ $("#getModels").onclick=async()=>{
   const r=await fetch($("#url").value.trim().replace(/\/$/,"")+"/models",{headers:key?{Authorization:"Bearer "+key}:{}});
   if(!r.ok)throw 0;const j=await r.json();
   const ids=(j.data||j.models||[]).map(m=>(m.id||m.name||"").replace(/^models\//,"")).filter(Boolean).sort();
-  $("#models").innerHTML=ids.map(i=>`<option value="${esc(i)}">`).join("");
-  b.textContent=ids.length?`تم جلب ${ids.length} نموذجاً، اضغط حقل النموذج`:"لا توجد نماذج";
+  if($("#prov").value==="free"){
+   const f=ids.filter(i=>/free/i.test(i));
+   fillFree(f.length?f.map(i=>({id:i,n:i})):FREE.models,$("#freeSel").value);
+   b.textContent=f.length?`تم جلب ${f.length} نموذجاً مجانياً`:"لم تظهر نماذج مجانية؛ بقيت القائمة الافتراضية";
+  }else{
+   $("#models").innerHTML=ids.map(i=>`<option value="${esc(i)}">`).join("");
+   b.textContent=ids.length?`تم جلب ${ids.length} نموذجاً، اضغط حقل النموذج`:"لا توجد نماذج";
+  }
  }catch{b.textContent="تعذّر الجلب. أدخل اسم النموذج يدوياً."}
  setTimeout(()=>b.textContent="جلب قائمة النماذج",3500);
 };
-$("#save").onclick=()=>{cfg={prov:$("#prov").value,url:$("#url").value.trim(),key:$("#key").value.trim(),model:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value};store.set("tt_cfg",cfg);$("#dlg").close();render()};
+$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:prov==="free"?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value};store.set("tt_cfg",cfg);$("#dlg").close();render()};
 $("#cancel").onclick=()=>$("#dlg").close();
 $("#openSet").onclick=()=>{openSettings();closeSide()};
 $("#new").onclick=()=>{if(!ctrl)newChat()};
 $("#send").onclick=send;
+$("#attach").onclick=()=>$("#file").click();
+$("#file").onchange=e=>{addFiles([...e.target.files]);e.target.value=""};
+$("#in").addEventListener("paste",e=>{const fs=[...(e.clipboardData?.files||[])];if(fs.length){e.preventDefault();addFiles(fs)}});
+$("#box").addEventListener("dragover",e=>e.preventDefault());
+$("#box").addEventListener("drop",e=>{e.preventDefault();addFiles([...e.dataTransfer.files])});
 $("#in").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing&&innerWidth>760){e.preventDefault();send()}});
 $("#in").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,180)+"px"});
 $("#wrap").addEventListener("click",e=>{
