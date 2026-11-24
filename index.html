@@ -75,6 +75,27 @@ textarea.f{direction:rtl;text-align:start;min-height:70px}
 #scrim{position:fixed;inset:0;background:#0006;z-index:4;display:none}
 #scrim.on{display:block}
 }
+
+.agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:22px;text-align:start}
+.agent{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;text-align:start;line-height:1.5}
+.agent b{display:block;color:var(--ink);font-weight:600}
+.agent span{font-size:13px;color:var(--muted)}
+.agent.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.acts{display:flex;gap:4px;margin-top:4px;padding-inline-start:6px}
+.acts button{font-size:13px;color:var(--muted);padding:2px 8px;border-radius:8px}
+.acts button:hover{background:var(--surface)}
+.b table{border-collapse:collapse;margin:.4em 0 .8em;font-size:14.5px}
+.b th,.b td{border:1px solid var(--line);padding:6px 10px;text-align:start}
+.b th{background:var(--bg)}
+.tw{overflow:auto;max-width:100%}
+.b blockquote{margin:.4em 0;padding:2px 12px;border-inline-start:3px solid var(--accent);color:var(--muted)}
+.b a{color:var(--accent)}
+.b hr{border:0;border-top:1px solid var(--line);margin:.8em 0}
+.b h3,.b h4{margin:.6em 0 .3em;font-size:1.05em}
+.chip{font-size:13px;color:var(--accent);background:var(--user);padding:2px 10px;border-radius:999px;white-space:nowrap}
+#more .btn{width:100%;margin-top:8px;text-align:start}
+#more .btn.warn{color:var(--danger)}
+.links a{color:var(--accent);margin-inline-end:12px}
 </style>
 </head>
 <body>
@@ -86,7 +107,7 @@ textarea.f{direction:rtl;text-align:start;min-height:70px}
 </aside>
 <div id="scrim"></div>
 <main id="main">
-  <div id="top"><button id="menu" aria-label="القائمة">☰</button><div class="title" id="ttl">محادثة جديدة</div><span id="mdl" class="hint" style="direction:ltr;margin:0"></span></div>
+  <div id="top"><button id="menu" aria-label="القائمة">☰</button><div class="title" id="ttl">محادثة جديدة</div><span id="agentChip" class="chip"></span><button id="moreBtn" class="btn ghost sm" aria-label="المزيد">⋯</button></div>
   <div id="msgs"><div class="wrap" id="wrap"></div></div>
   <div id="bar"><div id="box">
     <textarea id="in" rows="1" placeholder="اكتب رسالتك…" aria-label="الرسالة"></textarea>
@@ -94,6 +115,13 @@ textarea.f{direction:rtl;text-align:start;min-height:70px}
   </div></div>
 </main>
 
+<dialog id="more">
+  <h2>خيارات المحادثة</h2>
+  <button class="btn ghost" id="rename">إعادة تسمية</button>
+  <button class="btn ghost" id="share">مشاركة / نسخ المحادثة</button>
+  <button class="btn ghost warn" id="clearAll">حذف كل المحادثات</button>
+  <div class="row"><button class="btn ghost" id="moreClose">إغلاق</button></div>
+</dialog>
 <dialog id="dlg">
   <h2>الإعدادات</h2>
   <label for="prov">المزوّد</label>
@@ -103,9 +131,14 @@ textarea.f{direction:rtl;text-align:start;min-height:70px}
   <label for="key">مفتاح API</label>
   <input id="key" class="f" type="password" autocomplete="off" placeholder="sk-…">
   <label for="model">النموذج</label>
-  <input id="model" class="f" autocomplete="off">
+  <input id="model" class="f" autocomplete="off" list="models">
+  <datalist id="models"></datalist>
+  <div style="margin-top:6px"><button class="btn ghost sm" id="getModels" type="button">جلب قائمة النماذج</button></div>
+  <label for="temp">الإبداعية (0 دقيق ← 2 مبدع): <span id="tv"></span></label>
+  <input id="temp" class="f" type="range" min="0" max="2" step="0.1">
   <label for="sys">تعليمات النظام (اختياري)</label>
   <textarea id="sys" class="f" placeholder="مثال: أجب بالعربية وباختصار."></textarea>
+  <div class="hint links">احصل على مفتاح: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a><a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini</a></div>
   <div class="hint">يُحفظ المفتاح في هذا المتصفح فقط، ويُرسل مباشرة إلى المزوّد الذي تختاره.</div>
   <div class="row"><button class="btn ghost" id="cancel">إغلاق</button><button class="btn" id="save">حفظ</button></div>
 </dialog>
@@ -121,75 +154,111 @@ const PROVIDERS={
  custom:{n:"مخصص (متوافق مع OpenAI)",u:"",m:""}
 };
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-let cfg=store.get("tt_cfg",{prov:"openrouter",url:PROVIDERS.openrouter.u,key:"",model:PROVIDERS.openrouter.m,sys:""});
+let cfg=Object.assign({prov:"openrouter",url:PROVIDERS.openrouter.u,key:"",model:PROVIDERS.openrouter.m,sys:"",temp:0.7},store.get("tt_cfg",{}));
+let draftAgent=store.get("tt_agent","general");
 let chats=store.get("tt_chats",[]);
 let cur=store.get("tt_cur",null);
 let ctrl=null;
 
+const AGENTS={
+ general:{n:"مساعد عام",d:"أسئلة وأفكار ونقاش",p:"أنت مساعد ذكي ودود. أجب بنفس لغة المستخدم، بوضوح وباختصار."},
+ coder:{n:"مبرمج",d:"كتابة الكود وإصلاح الأخطاء",p:"أنت مهندس برمجيات خبير. اكتب كوداً نظيفاً، واشرح الفكرة باختصار، ونبّه إلى الأخطاء والحالات الحدّية المحتملة."},
+ translator:{n:"مترجم",d:"عربي ⇄ إنجليزي وغيرها",p:"أنت مترجم محترف. ترجم أي نص يرسله المستخدم بين العربية والإنجليزية (أو اللغة التي يحددها). أعد الترجمة وحدها دون شرح إلا إذا طُلب."},
+ summarizer:{n:"ملخّص",d:"اختصار النصوص الطويلة",p:"لخّص ما يرسله المستخدم في نقاط قصيرة، ثم اختم بجملة خلاصة واحدة."},
+ writer:{n:"كاتب",d:"صياغة وتحسين النصوص",p:"أنت كاتب محترف. حسّن الصياغة، واقترح عناوين ونصوصاً مقنعة بأسلوب سليم وسلس، وحافظ على المعنى."},
+ tutor:{n:"معلّم",d:"شرح خطوة بخطوة",p:"أنت معلّم صبور. اشرح بخطوات بسيطة وأمثلة، ثم اطرح سؤالاً واحداً للتأكد من الفهم."},
+ analyst:{n:"محلّل",d:"أرقام وأعمال وقرارات",p:"أنت محلل بيانات وأعمال. فكّر بالأرقام، اذكر افتراضاتك، وقدّم توصيات واضحة قابلة للتنفيذ."}
+};
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function inline(t){return esc(t).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")}
-function md(src){
- const parts=src.split(/```/);let out="";
- parts.forEach((p,i)=>{
-  if(i%2){const nl=p.indexOf("\n");const code=nl>-1?p.slice(nl+1):p;out+=`<pre><button class="copy" data-c>نسخ</button><code>${esc(code.replace(/\n$/,""))}</code></pre>`;return}
-  let html="",list=null;
-  for(const line of p.split("\n")){
-   const ul=line.match(/^\s*[-*•]\s+(.*)/),ol=line.match(/^\s*\d+[.)]\s+(.*)/);
-   if(ul||ol){const tag=ul?"ul":"ol";if(list!==tag){if(list)html+=`</${list}>`;html+=`<${tag}>`;list=tag}html+=`<li>${inline((ul||ol)[1])}</li>`;continue}
-   if(list){html+=`</${list}>`;list=null}
-   const h=line.match(/^#{1,6}\s+(.*)/);
-   if(h)html+=`<p><b>${inline(h[1])}</b></p>`;else if(line.trim())html+=`<p>${inline(line)}</p>`;
+function inline(t){
+ return esc(t).replace(/`([^`]+)`/g,"<code>$1</code>")
+  .replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")
+  .replace(/(^|[\s(])\*([^*\s][^*]*)\*/g,"$1<i>$2</i>")
+  .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+function block(p){
+ const L=p.split("\n");let h="",list=null,i=0;
+ const close=()=>{if(list){h+=`</${list}>`;list=null}};
+ while(i<L.length){
+  const line=L[i];
+  if(/^\s*\|/.test(line)){
+   close();const rows=[];while(i<L.length&&/^\s*\|/.test(L[i])){rows.push(L[i]);i++}
+   const cells=r=>r.trim().replace(/^\||\|$/g,"").split("|").map(c=>inline(c.trim()));
+   const body=rows.filter(r=>!/^[\s|:-]+$/.test(r));
+   if(body.length){h+='<div class="tw"><table><thead><tr>'+cells(body[0]).map(c=>`<th>${c}</th>`).join("")+"</tr></thead><tbody>"+body.slice(1).map(r=>"<tr>"+cells(r).map(c=>`<td>${c}</td>`).join("")+"</tr>").join("")+"</tbody></table></div>"}
+   continue;
   }
-  if(list)html+=`</${list}>`;out+=html;
- });
- return out;
+  const ul=line.match(/^\s*[-*•]\s+(.*)/),ol=line.match(/^\s*\d+[.)]\s+(.*)/);
+  if(ul||ol){const tag=ul?"ul":"ol";if(list!==tag){close();h+=`<${tag}>`;list=tag}h+=`<li>${inline((ul||ol)[1])}</li>`;i++;continue}
+  close();
+  const hd=line.match(/^(#{1,6})\s+(.*)/),q=line.match(/^>\s?(.*)/);
+  if(/^\s*([-*_])\1\1+\s*$/.test(line))h+="<hr>";
+  else if(hd)h+=`<h${hd[1].length<3?3:4}>${inline(hd[2])}</h${hd[1].length<3?3:4}>`;
+  else if(q)h+=`<blockquote>${inline(q[1])}</blockquote>`;
+  else if(line.trim())h+=`<p>${inline(line)}</p>`;
+  i++;
+ }
+ close();return h;
+}
+function md(src){
+ return src.split(/```/).map((p,i)=>{
+  if(i%2){const nl=p.indexOf("\n");const code=nl>-1?p.slice(nl+1):p;return `<pre><button class="copy" data-c>نسخ</button><code>${esc(code.replace(/\n$/,""))}</code></pre>`}
+  return block(p);
+ }).join("");
 }
 const save=()=>{store.set("tt_chats",chats);store.set("tt_cur",cur)};
 const getChat=()=>chats.find(c=>c.id===cur);
-function newChat(){const c={id:Date.now().toString(36),title:"محادثة جديدة",msgs:[]};chats.unshift(c);cur=c.id;save();render();closeSide();$("#in").focus()}
+const agentOf=c=>AGENTS[(c&&c.agent)||draftAgent]||AGENTS.general;
+function newChat(){
+ const e=getChat();if(e&&!e.msgs.length){closeSide();$("#in").focus();return e}
+ const c={id:Date.now().toString(36),title:"محادثة جديدة",agent:draftAgent,msgs:[]};chats.unshift(c);cur=c.id;save();render();closeSide();$("#in").focus();return c;
+}
 function renderList(){
  const l=$("#list");l.innerHTML="";
  chats.forEach(c=>{
   const d=document.createElement("div");d.className="chat-item"+(c.id===cur?" on":"");
   d.innerHTML=`<button class="t">${esc(c.title)}</button><button class="x" aria-label="حذف">✕</button>`;
-  d.querySelector(".t").onclick=()=>{cur=c.id;save();render();closeSide()};
-  d.querySelector(".x").onclick=()=>{chats=chats.filter(x=>x.id!==c.id);if(cur===c.id)cur=chats[0]?.id||null;save();render()};
+  d.querySelector(".t").onclick=()=>{if(ctrl)return;cur=c.id;save();render();closeSide()};
+  d.querySelector(".x").onclick=()=>{if(ctrl)return;chats=chats.filter(x=>x.id!==c.id);if(cur===c.id)cur=chats[0]?.id||null;save();render()};
   l.appendChild(d);
  });
 }
-function bubble(m,live){
+function bubble(m,live,last){
  const d=document.createElement("div");d.className="msg "+(m.role==="user"?"user":"ai")+(m.err?" err":"");
  const b=document.createElement("div");b.className="b";
  if(m.role==="user")b.textContent=m.content;else{b.innerHTML=md(m.content||"");if(live)b.classList.add("cursor")}
- d.appendChild(b);$("#wrap").appendChild(d);return b;
+ d.appendChild(b);
+ if(m.role!=="user"&&!live){
+  const a=document.createElement("div");a.className="acts";
+  a.innerHTML=`<button data-a="copy">نسخ</button>${last?'<button data-a="redo">إعادة التوليد</button>':""}`;
+  d.appendChild(a);
+ }
+ $("#wrap").appendChild(d);return b;
 }
 function render(){
  renderList();const c=getChat();const w=$("#wrap");w.innerHTML="";
- $("#ttl").textContent=c?c.title:"محادثة جديدة";$("#mdl").textContent=cfg.model||"";
+ const ag=agentOf(c);
+ $("#ttl").textContent=c?c.title:"محادثة جديدة";$("#agentChip").textContent=ag.n;
  if(!c||!c.msgs.length){
-  w.innerHTML=`<div class="empty"><h1>كيف أساعدك اليوم؟</h1><p>${cfg.key||cfg.prov==="ollama"?"اكتب رسالتك في الأسفل لتبدأ.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p></div>`;return}
- c.msgs.forEach(m=>bubble(m));scrollDown();
+  const ready=cfg.key||cfg.prov==="ollama";
+  w.innerHTML=`<div class="empty"><h1>كيف أساعدك اليوم؟</h1><p>${ready?"اختر مساعداً ثم اكتب رسالتك.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p><div class="agents">${Object.entries(AGENTS).map(([k,a])=>`<button class="agent${(c?c.agent:draftAgent)===k?" on":""}" data-ag="${k}"><b>${a.n}</b><span>${a.d}</span></button>`).join("")}</div></div>`;return}
+ c.msgs.forEach((m,i)=>bubble(m,false,i===c.msgs.length-1&&m.role!=="user"));scrollDown();
 }
 const scrollDown=()=>{const m=$("#msgs");m.scrollTop=m.scrollHeight};
 function setBusy(b){const s=$("#send");s.textContent=b?"■":"↑";s.classList.toggle("stop",b);s.setAttribute("aria-label",b?"إيقاف":"إرسال")}
 
-async function send(){
- if(ctrl){ctrl.abort();return}
- const inp=$("#in");const text=inp.value.trim();if(!text)return;
- if(!cfg.key&&cfg.prov!=="ollama"){openSettings();return}
- if(!getChat())newChat();
- const c=getChat();c.msgs.push({role:"user",content:text});
- if(c.msgs.length===1)c.title=text.slice(0,40);
- inp.value="";inp.style.height="auto";save();render();
+async function run(c){
  const ai={role:"assistant",content:""};
- const el=bubble(ai,true);scrollDown();
+ render();const el=bubble(ai,true);scrollDown();
  ctrl=new AbortController();setBusy(true);
- const msgs=[...(cfg.sys?[{role:"system",content:cfg.sys}]:[]),...c.msgs.map(m=>({role:m.role,content:m.content}))];
+ const sys=[agentOf(c).p,cfg.sys].filter(Boolean).join("\n\n");
+ const msgs=[{role:"system",content:sys},...c.msgs.filter(m=>!m.err).map(m=>({role:m.role,content:m.content}))];
  try{
   const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",signal:ctrl.signal,
    headers:{"Content-Type":"application/json",...(cfg.key?{Authorization:"Bearer "+cfg.key}:{})},
-   body:JSON.stringify({model:cfg.model,messages:msgs,stream:true})});
-  if(!r.ok){let t="";try{t=(await r.json()).error?.message||""}catch{}throw new Error(`خطأ ${r.status}${t?": "+t:""}`)}
+   body:JSON.stringify({model:cfg.model,messages:msgs,stream:true,temperature:Number(cfg.temp)})});
+  if(!r.ok){let t="";try{const j=await r.json();t=j.error?.message||j[0]?.error?.message||""}catch{}
+   throw new Error(r.status===401?"المفتاح غير صحيح أو منتهي. راجع الإعدادات.":r.status===429?"تجاوزت الحد المسموح أو لا يوجد رصيد. جرّب لاحقاً أو غيّر النموذج.":`خطأ ${r.status}${t?": "+t:""}`)}
   const rd=r.body.getReader(),dec=new TextDecoder();let buf="";
   for(;;){
    const {done,value}=await rd.read();if(done)break;
@@ -199,28 +268,76 @@ async function send(){
     try{const t=JSON.parse(d).choices?.[0]?.delta?.content;if(t){ai.content+=t;el.innerHTML=md(ai.content);el.classList.add("cursor");scrollDown()}}catch{}
    }
   }
-  if(!ai.content)throw new Error("لم يصل رد من النموذج.");
+  if(!ai.content)throw new Error("لم يصل رد من النموذج. جرّب نموذجاً آخر.");
   c.msgs.push(ai);
  }catch(e){
   if(e.name==="AbortError"){if(ai.content)c.msgs.push(ai)}
-  else{const msg=e instanceof TypeError?"تعذّر الاتصال. تحقق من الإنترنت ومن عنوان API.":e.message;c.msgs.push({role:"assistant",content:msg,err:true})}
+  else{c.msgs.push({role:"assistant",content:e instanceof TypeError?"تعذّر الاتصال. تحقق من الإنترنت ومن عنوان API.":e.message,err:true})}
  }finally{ctrl=null;setBusy(false);save();render()}
 }
+async function send(){
+ if(ctrl){ctrl.abort();return}
+ const inp=$("#in");const text=inp.value.trim();if(!text)return;
+ if(!cfg.key&&cfg.prov!=="ollama"){openSettings();return}
+ const c=getChat()||newChat();
+ c.msgs.push({role:"user",content:text});
+ if(c.msgs.length===1)c.title=text.slice(0,40);
+ inp.value="";inp.style.height="auto";save();run(c);
+}
+function redo(){
+ const c=getChat();if(!c||ctrl)return;
+ while(c.msgs.length&&c.msgs[c.msgs.length-1].role!=="user")c.msgs.pop();
+ if(c.msgs.length)run(c);
+}
+const chatText=c=>`${c.title}\n\n`+c.msgs.map(m=>(m.role==="user"?"أنا: ":agentOf(c).n+": ")+m.content).join("\n\n");
 
 function openSettings(){
  const p=$("#prov");p.innerHTML=Object.entries(PROVIDERS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join("");
  p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=cfg.key;$("#model").value=cfg.model;$("#sys").value=cfg.sys;
+ $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;
  $("#dlg").showModal();
 }
-$("#prov").onchange=e=>{const v=PROVIDERS[e.target.value];$("#url").value=v.u;$("#model").value=v.m};
-$("#save").onclick=()=>{cfg={prov:$("#prov").value,url:$("#url").value.trim(),key:$("#key").value.trim(),model:$("#model").value.trim(),sys:$("#sys").value.trim()};store.set("tt_cfg",cfg);$("#dlg").close();render()};
+$("#temp").oninput=e=>$("#tv").textContent=e.target.value;
+$("#prov").onchange=e=>{const v=PROVIDERS[e.target.value];$("#url").value=v.u;$("#model").value=v.m;$("#models").innerHTML=""};
+$("#getModels").onclick=async()=>{
+ const b=$("#getModels");b.textContent="جارٍ الجلب…";
+ try{
+  const key=$("#key").value.trim();
+  const r=await fetch($("#url").value.trim().replace(/\/$/,"")+"/models",{headers:key?{Authorization:"Bearer "+key}:{}});
+  if(!r.ok)throw 0;const j=await r.json();
+  const ids=(j.data||j.models||[]).map(m=>(m.id||m.name||"").replace(/^models\//,"")).filter(Boolean).sort();
+  $("#models").innerHTML=ids.map(i=>`<option value="${esc(i)}">`).join("");
+  b.textContent=ids.length?`تم جلب ${ids.length} نموذجاً، اضغط حقل النموذج`:"لا توجد نماذج";
+ }catch{b.textContent="تعذّر الجلب. أدخل اسم النموذج يدوياً."}
+ setTimeout(()=>b.textContent="جلب قائمة النماذج",3500);
+};
+$("#save").onclick=()=>{cfg={prov:$("#prov").value,url:$("#url").value.trim(),key:$("#key").value.trim(),model:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value};store.set("tt_cfg",cfg);$("#dlg").close();render()};
 $("#cancel").onclick=()=>$("#dlg").close();
 $("#openSet").onclick=()=>{openSettings();closeSide()};
-$("#new").onclick=newChat;
+$("#new").onclick=()=>{if(!ctrl)newChat()};
 $("#send").onclick=send;
 $("#in").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing&&innerWidth>760){e.preventDefault();send()}});
 $("#in").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,180)+"px"});
-$("#wrap").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(b){navigator.clipboard?.writeText(b.parentElement.querySelector("code").textContent);b.textContent="تم النسخ";setTimeout(()=>b.textContent="نسخ",1200)}});
+$("#wrap").addEventListener("click",e=>{
+ const cp=e.target.closest("[data-c]");
+ if(cp){navigator.clipboard?.writeText(cp.parentElement.querySelector("code").textContent);cp.textContent="تم النسخ";setTimeout(()=>cp.textContent="نسخ",1200);return}
+ const ag=e.target.closest("[data-ag]");
+ if(ag){draftAgent=ag.dataset.ag;store.set("tt_agent",draftAgent);const c=getChat();if(c&&!c.msgs.length){c.agent=draftAgent;save()}render();$("#in").focus();return}
+ const a=e.target.closest("[data-a]");
+ if(a){
+  if(a.dataset.a==="redo")redo();
+  else{const t=a.closest(".msg").querySelector(".b").innerText;navigator.clipboard?.writeText(t);a.textContent="تم النسخ";setTimeout(()=>a.textContent="نسخ",1200)}
+ }
+});
+$("#moreBtn").onclick=()=>$("#more").showModal();
+$("#moreClose").onclick=()=>$("#more").close();
+$("#rename").onclick=()=>{const c=getChat();if(!c)return;const t=prompt("اسم المحادثة",c.title);if(t&&t.trim()){c.title=t.trim().slice(0,60);save();render()}$("#more").close()};
+$("#share").onclick=async()=>{
+ const c=getChat();$("#more").close();if(!c||!c.msgs.length)return;
+ const t=chatText(c);
+ try{if(navigator.share){await navigator.share({title:c.title,text:t})}else{await navigator.clipboard.writeText(t);alert("تم نسخ المحادثة")}}catch{}
+};
+$("#clearAll").onclick=()=>{if(ctrl)return;if(confirm("حذف كل المحادثات نهائياً؟")){chats=[];cur=null;save();render()}$("#more").close()};
 const closeSide=()=>{$("#side").classList.remove("open");$("#scrim").classList.remove("on")};
 $("#menu").onclick=()=>{$("#side").classList.add("open");$("#scrim").classList.add("on")};
 $("#scrim").onclick=closeSide;
