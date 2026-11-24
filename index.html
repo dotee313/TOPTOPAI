@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E7C86">
+<title>TOPTOPAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F4F6F8;--surface:#fff;--ink:#16202A;--muted:#6B7886;--line:#E2E7EC;--accent:#0E7C86;--accent-ink:#fff;--user:#E3F3F4;--code:#0F1A22;--code-ink:#DDE7EE;--danger:#C0392B}
+@media(prefers-color-scheme:dark){:root{--bg:#0E1418;--surface:#161E24;--ink:#E8EEF2;--muted:#8A98A5;--line:#243038;--accent:#2BB3BF;--accent-ink:#06191B;--user:#14363A;--code:#0A1014;--danger:#FF7A6B}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.7;display:flex;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#side{width:280px;background:var(--surface);border-inline-end:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0}
+#side header{padding:16px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:600;font-size:19px;letter-spacing:.3px;direction:ltr}
+.brand b{color:var(--accent)}
+.btn{background:var(--accent);color:var(--accent-ink);padding:9px 16px;border-radius:10px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:6px 12px;font-size:14px}
+#new{margin:0 16px 8px}
+#list{flex:1;overflow:auto;padding:8px}
+.chat-item{display:flex;align-items:center;border-radius:10px;padding:2px 4px 2px 0}
+.chat-item button.t{flex:1;text-align:start;padding:8px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:10px}
+.chat-item.on,.chat-item:hover{background:var(--bg)}
+.chat-item .x{color:var(--muted);padding:6px 10px;opacity:.0}
+.chat-item:hover .x,.chat-item .x:focus-visible{opacity:1}
+#side footer{padding:12px 16px;border-top:1px solid var(--line)}
+#main{flex:1;min-width:0;display:flex;flex-direction:column;height:100%}
+#top{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+#top .title{flex:1;font-weight:500;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#menu{display:none;padding:6px 10px;border-radius:8px;border:1px solid var(--line)}
+#msgs{flex:1;overflow:auto;padding:24px 16px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.msg{display:flex;flex-direction:column;max-width:100%}
+.msg .b{padding:10px 14px;border-radius:16px;overflow-wrap:anywhere}
+.msg.user{align-items:flex-start}
+.msg.user .b{background:var(--user);border-end-start-radius:4px;white-space:pre-wrap}
+.msg.ai .b{background:var(--surface);border:1px solid var(--line);border-end-end-radius:4px}
+.msg.err .b{border-color:var(--danger);color:var(--danger)}
+.b p{margin:0 0 .6em}.b p:last-child{margin:0}
+.b ul,.b ol{margin:.2em 0 .6em;padding-inline-start:1.4em}
+.b code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--bg);padding:1px 6px;border-radius:6px;direction:ltr;unicode-bidi:embed}
+.b pre{background:var(--code);color:var(--code-ink);border-radius:12px;padding:12px 14px;overflow:auto;direction:ltr;text-align:left;position:relative;margin:.4em 0 .8em}
+.b pre code{background:none;padding:0;color:inherit;font-size:13.5px}
+.copy{position:absolute;top:6px;right:8px;font-size:12px;color:var(--code-ink);opacity:.7;padding:2px 8px;border-radius:6px;border:1px solid #ffffff33}
+.cursor::after{content:"";display:inline-block;width:7px;height:1em;background:var(--accent);margin-inline-start:3px;vertical-align:-2px;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.cursor::after{animation:none}}
+.empty{margin:12vh auto 0;text-align:center;max-width:420px;color:var(--muted)}
+.empty h1{color:var(--ink);font-size:26px;margin:0 0 6px}
+#bar{padding:12px 16px 16px}
+#box{max-width:760px;margin:0 auto;display:flex;gap:8px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:8px}
+#in{flex:1;border:0;background:transparent;resize:none;max-height:180px;padding:8px 10px;outline:0;line-height:1.6}
+#send{background:var(--accent);color:var(--accent-ink);width:42px;height:42px;border-radius:12px;font-size:18px;display:grid;place-items:center;flex-shrink:0}
+#send.stop{background:var(--danger)}
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);padding:20px;width:min(440px,92vw)}
+dialog::backdrop{background:#0008}
+dialog h2{margin:0 0 12px;font-size:18px}
+label{display:block;font-size:14px;color:var(--muted);margin:12px 0 4px}
+input.f,select.f,textarea.f{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);direction:ltr;text-align:left}
+textarea.f{direction:rtl;text-align:start;min-height:70px}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.hint{font-size:13px;color:var(--muted);margin-top:6px}
+@media(max-width:760px){
+#side{position:fixed;inset-block:0;inset-inline-start:0;z-index:5;transform:translateX(100%);transition:transform .2s;height:100%}
+[dir=rtl] #side{transform:translateX(100%)}
+#side.open{transform:none}
+#menu{display:block}
+#scrim{position:fixed;inset:0;background:#0006;z-index:4;display:none}
+#scrim.on{display:block}
+}
+</style>
+</head>
+<body>
+<aside id="side" aria-label="المحادثات">
+  <header><span class="brand">TOP<b>TOP</b>AI</span></header>
+  <button id="new" class="btn">محادثة جديدة</button>
+  <nav id="list"></nav>
+  <footer><button id="openSet" class="btn ghost" style="width:100%">الإعدادات</button></footer>
+</aside>
+<div id="scrim"></div>
+<main id="main">
+  <div id="top"><button id="menu" aria-label="القائمة">☰</button><div class="title" id="ttl">محادثة جديدة</div><span id="mdl" class="hint" style="direction:ltr;margin:0"></span></div>
+  <div id="msgs"><div class="wrap" id="wrap"></div></div>
+  <div id="bar"><div id="box">
+    <textarea id="in" rows="1" placeholder="اكتب رسالتك…" aria-label="الرسالة"></textarea>
+    <button id="send" aria-label="إرسال">↑</button>
+  </div></div>
+</main>
+
+<dialog id="dlg">
+  <h2>الإعدادات</h2>
+  <label for="prov">المزوّد</label>
+  <select id="prov" class="f"></select>
+  <label for="url">عنوان API</label>
+  <input id="url" class="f" autocomplete="off">
+  <label for="key">مفتاح API</label>
+  <input id="key" class="f" type="password" autocomplete="off" placeholder="sk-…">
+  <label for="model">النموذج</label>
+  <input id="model" class="f" autocomplete="off">
+  <label for="sys">تعليمات النظام (اختياري)</label>
+  <textarea id="sys" class="f" placeholder="مثال: أجب بالعربية وباختصار."></textarea>
+  <div class="hint">يُحفظ المفتاح في هذا المتصفح فقط، ويُرسل مباشرة إلى المزوّد الذي تختاره.</div>
+  <div class="row"><button class="btn ghost" id="cancel">إغلاق</button><button class="btn" id="save">حفظ</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const PROVIDERS={
+ openai:{n:"OpenAI",u:"https://api.openai.com/v1",m:"gpt-4o-mini"},
+ openrouter:{n:"OpenRouter (نماذج كثيرة)",u:"https://openrouter.ai/api/v1",m:"openai/gpt-4o-mini"},
+ groq:{n:"Groq",u:"https://api.groq.com/openai/v1",m:"llama-3.3-70b-versatile"},
+ gemini:{n:"Google Gemini",u:"https://generativelanguage.googleapis.com/v1beta/openai",m:"gemini-2.0-flash"},
+ ollama:{n:"Ollama (محلي)",u:"http://localhost:11434/v1",m:"llama3.2"},
+ custom:{n:"مخصص (متوافق مع OpenAI)",u:"",m:""}
+};
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+let cfg=store.get("tt_cfg",{prov:"openrouter",url:PROVIDERS.openrouter.u,key:"",model:PROVIDERS.openrouter.m,sys:""});
+let chats=store.get("tt_chats",[]);
+let cur=store.get("tt_cur",null);
+let ctrl=null;
+
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function inline(t){return esc(t).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")}
+function md(src){
+ const parts=src.split(/```/);let out="";
+ parts.forEach((p,i)=>{
+  if(i%2){const nl=p.indexOf("\n");const code=nl>-1?p.slice(nl+1):p;out+=`<pre><button class="copy" data-c>نسخ</button><code>${esc(code.replace(/\n$/,""))}</code></pre>`;return}
+  let html="",list=null;
+  for(const line of p.split("\n")){
+   const ul=line.match(/^\s*[-*•]\s+(.*)/),ol=line.match(/^\s*\d+[.)]\s+(.*)/);
+   if(ul||ol){const tag=ul?"ul":"ol";if(list!==tag){if(list)html+=`</${list}>`;html+=`<${tag}>`;list=tag}html+=`<li>${inline((ul||ol)[1])}</li>`;continue}
+   if(list){html+=`</${list}>`;list=null}
+   const h=line.match(/^#{1,6}\s+(.*)/);
+   if(h)html+=`<p><b>${inline(h[1])}</b></p>`;else if(line.trim())html+=`<p>${inline(line)}</p>`;
+  }
+  if(list)html+=`</${list}>`;out+=html;
+ });
+ return out;
+}
+const save=()=>{store.set("tt_chats",chats);store.set("tt_cur",cur)};
+const getChat=()=>chats.find(c=>c.id===cur);
+function newChat(){const c={id:Date.now().toString(36),title:"محادثة جديدة",msgs:[]};chats.unshift(c);cur=c.id;save();render();closeSide();$("#in").focus()}
+function renderList(){
+ const l=$("#list");l.innerHTML="";
+ chats.forEach(c=>{
+  const d=document.createElement("div");d.className="chat-item"+(c.id===cur?" on":"");
+  d.innerHTML=`<button class="t">${esc(c.title)}</button><button class="x" aria-label="حذف">✕</button>`;
+  d.querySelector(".t").onclick=()=>{cur=c.id;save();render();closeSide()};
+  d.querySelector(".x").onclick=()=>{chats=chats.filter(x=>x.id!==c.id);if(cur===c.id)cur=chats[0]?.id||null;save();render()};
+  l.appendChild(d);
+ });
+}
+function bubble(m,live){
+ const d=document.createElement("div");d.className="msg "+(m.role==="user"?"user":"ai")+(m.err?" err":"");
+ const b=document.createElement("div");b.className="b";
+ if(m.role==="user")b.textContent=m.content;else{b.innerHTML=md(m.content||"");if(live)b.classList.add("cursor")}
+ d.appendChild(b);$("#wrap").appendChild(d);return b;
+}
+function render(){
+ renderList();const c=getChat();const w=$("#wrap");w.innerHTML="";
+ $("#ttl").textContent=c?c.title:"محادثة جديدة";$("#mdl").textContent=cfg.model||"";
+ if(!c||!c.msgs.length){
+  w.innerHTML=`<div class="empty"><h1>كيف أساعدك اليوم؟</h1><p>${cfg.key||cfg.prov==="ollama"?"اكتب رسالتك في الأسفل لتبدأ.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p></div>`;return}
+ c.msgs.forEach(m=>bubble(m));scrollDown();
+}
+const scrollDown=()=>{const m=$("#msgs");m.scrollTop=m.scrollHeight};
+function setBusy(b){const s=$("#send");s.textContent=b?"■":"↑";s.classList.toggle("stop",b);s.setAttribute("aria-label",b?"إيقاف":"إرسال")}
+
+async function send(){
+ if(ctrl){ctrl.abort();return}
+ const inp=$("#in");const text=inp.value.trim();if(!text)return;
+ if(!cfg.key&&cfg.prov!=="ollama"){openSettings();return}
+ if(!getChat())newChat();
+ const c=getChat();c.msgs.push({role:"user",content:text});
+ if(c.msgs.length===1)c.title=text.slice(0,40);
+ inp.value="";inp.style.height="auto";save();render();
+ const ai={role:"assistant",content:""};
+ const el=bubble(ai,true);scrollDown();
+ ctrl=new AbortController();setBusy(true);
+ const msgs=[...(cfg.sys?[{role:"system",content:cfg.sys}]:[]),...c.msgs.map(m=>({role:m.role,content:m.content}))];
+ try{
+  const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",signal:ctrl.signal,
+   headers:{"Content-Type":"application/json",...(cfg.key?{Authorization:"Bearer "+cfg.key}:{})},
+   body:JSON.stringify({model:cfg.model,messages:msgs,stream:true})});
+  if(!r.ok){let t="";try{t=(await r.json()).error?.message||""}catch{}throw new Error(`خطأ ${r.status}${t?": "+t:""}`)}
+  const rd=r.body.getReader(),dec=new TextDecoder();let buf="";
+  for(;;){
+   const {done,value}=await rd.read();if(done)break;
+   buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop();
+   for(const ln of lines){
+    const s=ln.trim();if(!s.startsWith("data:"))continue;const d=s.slice(5).trim();if(d==="[DONE]")continue;
+    try{const t=JSON.parse(d).choices?.[0]?.delta?.content;if(t){ai.content+=t;el.innerHTML=md(ai.content);el.classList.add("cursor");scrollDown()}}catch{}
+   }
+  }
+  if(!ai.content)throw new Error("لم يصل رد من النموذج.");
+  c.msgs.push(ai);
+ }catch(e){
+  if(e.name==="AbortError"){if(ai.content)c.msgs.push(ai)}
+  else{const msg=e instanceof TypeError?"تعذّر الاتصال. تحقق من الإنترنت ومن عنوان API.":e.message;c.msgs.push({role:"assistant",content:msg,err:true})}
+ }finally{ctrl=null;setBusy(false);save();render()}
+}
+
+function openSettings(){
+ const p=$("#prov");p.innerHTML=Object.entries(PROVIDERS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join("");
+ p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=cfg.key;$("#model").value=cfg.model;$("#sys").value=cfg.sys;
+ $("#dlg").showModal();
+}
+$("#prov").onchange=e=>{const v=PROVIDERS[e.target.value];$("#url").value=v.u;$("#model").value=v.m};
+$("#save").onclick=()=>{cfg={prov:$("#prov").value,url:$("#url").value.trim(),key:$("#key").value.trim(),model:$("#model").value.trim(),sys:$("#sys").value.trim()};store.set("tt_cfg",cfg);$("#dlg").close();render()};
+$("#cancel").onclick=()=>$("#dlg").close();
+$("#openSet").onclick=()=>{openSettings();closeSide()};
+$("#new").onclick=newChat;
+$("#send").onclick=send;
+$("#in").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing&&innerWidth>760){e.preventDefault();send()}});
+$("#in").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,180)+"px"});
+$("#wrap").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(b){navigator.clipboard?.writeText(b.parentElement.querySelector("code").textContent);b.textContent="تم النسخ";setTimeout(()=>b.textContent="نسخ",1200)}});
+const closeSide=()=>{$("#side").classList.remove("open");$("#scrim").classList.remove("on")};
+$("#menu").onclick=()=>{$("#side").classList.add("open");$("#scrim").classList.add("on")};
+$("#scrim").onclick=closeSide;
+if(!getChat())cur=chats[0]?.id||null;
+render();
+</script>
+</body>
+</html>
