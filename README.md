@@ -11,5 +11,8 @@ OpenAI · OpenRouter · Groq · Google Gemini · Ollama (محلي) · أي خد�
 
 المفتاح والمحادثات تُحفظ في المتصفح فقط.
 
+## تطبيق أندرويد
+يُبنى ملف APK تلقائياً عبر GitHub Actions ويظهر في قسم Releases.
+
 ## الخطوة التالية
 دمج تطبيقات awesome-llm-apps كوكلاء جاهزين داخل الواجهة.
