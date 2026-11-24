@@ -115,6 +115,10 @@ dialog#dlg{max-height:90vh;overflow:auto}
 .think div{white-space:pre-wrap;padding:4px 0}
 .tool pre{font-size:12px;margin:.3em 0}
 .usage{font-size:12px;color:var(--muted);align-self:center;margin-inline-start:6px;direction:ltr}
+.mcard{border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin:0 0 8px}
+.mcard.on{border-color:var(--accent)}.mcard.err{color:var(--danger)}
+.mh{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);direction:ltr;margin-bottom:4px}
+.pk{font-size:12.5px;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -160,10 +164,12 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <datalist id="models"></datalist></div>
   <div id="freeBox" hidden><label for="freeSel">النموذج المجاني</label>
   <select id="freeSel" class="f"></select>
-  <div class="warn-box">⚠️ النماذج المجانية قد تكون لها حدود استخدام (عدد الطلبات/الحجم) وشروط خدمة خاصة بالمزوّد، وقد تتغير أو تُسحب في أي وقت. قد تطلب البوابة مفتاح AI Gateway (يُنشأ مجاناً من حسابك في Vercel) ويُدخل في حقل المفتاح أعلاه. مفاتيحك الأخرى (OpenAI وغيرها) تبقى محفوظة منفصلة ولا تُرسل إلى هذه البوابة. النماذج غير المدمجة قد لا تدعم الصور.</div></div>
+  <div class="warn-box">⚠️ النماذج المجانية قد تكون لها حدود استخدام (عدد الطلبات/الحجم) وشروط خدمة خاصة بالمزوّد، وقد تتغير أو تُسحب في أي وقت. قد تطلب البوابة مفتاح AI Gateway (يُنشأ مجاناً من حسابك في Vercel) ويُدخل في حقل المفتاح أعلاه. مفاتيحك الأخرى (OpenAI وغيرها) تبقى محفوظة منفصلة ولا تُرسل إلى هذه البوابة. النماذج غير المدمجة قد لا تدعم الصور. عند اختيار «OpenRouter — نماذج مجانية» أدخل مفتاح OpenRouter (التسجيل مجاني). زر «جلب قائمة النماذج» يحدّث القائمة بالنماذج المجانية المتاحة فعلاً الآن.</div></div>
   <div style="margin-top:6px"><button class="btn ghost sm" id="getModels" type="button">جلب قائمة النماذج</button></div>
   <label for="temp">الإبداعية (0 دقيق ← 2 مبدع): <span id="tv"></span></label>
   <input id="temp" class="f" type="range" min="0" max="2" step="0.1">
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="multiOn" type="checkbox"> وضع المقارنة: تشغيل حتى 3 نماذج معاً (بلا أدوات)</label>
+  <input id="multi" class="f" placeholder="نماذج مفصولة بفواصل (فارغ في الوضع المجاني = أول 3 نماذج)">
   <label for="img">نموذج توليد الصور (للأمر /image — OpenAI أو Gemini)</label>
   <input id="img" class="f" placeholder="gpt-image-1">
   <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="json" type="checkbox"> وضع JSON (يجب أن يذكر طلبك كلمة JSON)</label>
@@ -184,6 +190,8 @@ const FREE={url:"https://ai-gateway.vercel.sh/v1",models:[
  {id:"minimax/minimax-m3-free",n:"MiniMax M3 (مجاني)"},
  {id:"nvidia/nemotron-3.5-lightning-free",n:"NVIDIA Nemotron 3.5 Lightning (مجاني)"}
 ]};
+const OR_FREE=[{id:"deepseek/deepseek-r1:free",n:"DeepSeek R1 (مجاني)"},{id:"meta-llama/llama-3.3-70b-instruct:free",n:"Llama 3.3 70B (مجاني)"},{id:"google/gemini-2.0-flash-exp:free",n:"Gemini 2.0 Flash Exp (مجاني)"}];
+const FREELIST={free:FREE.models,orfree:OR_FREE};const isFree=p=>p in FREELIST;
 const PROVIDERS={
  openai:{n:"OpenAI",u:"https://api.openai.com/v1",m:"gpt-4o-mini"},
  openrouter:{n:"OpenRouter (نماذج كثيرة)",u:"https://openrouter.ai/api/v1",m:"openai/gpt-4o-mini"},
@@ -191,6 +199,7 @@ const PROVIDERS={
  gemini:{n:"Google Gemini",u:"https://generativelanguage.googleapis.com/v1beta/openai",m:"gemini-2.0-flash"},
  ollama:{n:"Ollama (محلي)",u:"http://localhost:11434/v1",m:"llama3.2"},
  free:{n:"نماذج مجانية (Vercel AI Gateway)",u:FREE.url,m:FREE.models[0].id},
+ orfree:{n:"OpenRouter — نماذج مجانية (:free)",u:"https://openrouter.ai/api/v1",m:OR_FREE[0].id},
  custom:{n:"مخصص (متوافق مع OpenAI)",u:"",m:""}
 };
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
@@ -285,6 +294,7 @@ function bubble(m,live,last,idx){
  }
 
  if(m.role==="user"&&idx!==undefined){const a=document.createElement("div");a.className="acts";a.innerHTML=`<button data-a="edit" data-i="${idx}">تعديل</button><button data-a="del" data-i="${idx}">حذف</button>`;d.appendChild(a)}
+ if(idx!==undefined)d.dataset.idx=idx;
  $("#wrap").appendChild(d);return b;
 }
 function render(){
@@ -309,7 +319,7 @@ const TOOLS={
 };
 const TOOL_DEFS=Object.entries(TOOLS).map(([name,t])=>({type:"function",function:{name,description:t.d,parameters:{type:"object",properties:t.p,required:Object.keys(t.p).filter(k=>k!=="lang")}}}));
 const toolHtml=t=>`<details class="tool"><summary>🔧 ${esc(t.name)}</summary><pre><code>${esc(JSON.stringify(t.args)+"\n→ "+(t.result===undefined?"…":JSON.stringify(t.result)))}</code></pre></details>`;
-const bodyHtml=m=>(m.reasoning?`<details class="think"${m.content?"":" open"}><summary>🧠 التفكير</summary><div>${esc(m.reasoning)}</div></details>`:"")+(m.tools||[]).map(toolHtml).join("")+md(m.content||"");
+const bodyHtml=m=>m.multi?m.multi.map((x,k)=>`<div class="mcard${m.pick===k?" on":""}${x.err?" err":""}"><div class="mh"><b>${esc(x.model)}</b>${x.usage?`<span>↑${x.usage.p} ↓${x.usage.c}</span>`:""}</div>${x.err?esc(x.err):bodyHtml(x)}${!m.live&&!x.err&&x.content?(m.pick===k?'<span class="pk">✓ المعتمد في سياق المحادثة</span>':`<button class="pk" data-a="pick" data-k="${k}">اعتمد هذا الرد</button>`):""}</div>`).join(""):(m.reasoning?`<details class="think"${m.content?"":" open"}><summary>🧠 التفكير</summary><div>${esc(m.reasoning)}</div></details>`:"")+(m.tools||[]).map(toolHtml).join("")+md(m.content||"");
 async function post(body){
  for(let a=0;;a++){
   const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",signal:ctrl.signal,
@@ -393,10 +403,43 @@ async function genImage(c,prompt){
  }catch(e){if(e.name!=="AbortError")c.msgs.push({role:"assistant",content:e instanceof TypeError?"تعذّر الاتصال.":e.message,err:true})}
  finally{ctrl=null;setBusy(false);save();render()}
 }
+const multiList=()=>{let l=(cfg.multi||"").split(",").map(x=>x.trim()).filter(Boolean);if(!l.length&&isFree(cfg.prov))l=FREELIST[cfg.prov].map(m=>m.id);return l.slice(0,3)};
+function go(c){const l=multiList();cfg.multiOn&&l.length>1?runMulti(c,l):run(c)}
+async function streamTo(r,x,upd){
+ const rd=r.body.getReader(),dec=new TextDecoder();let buf="",raw="",rs="";
+ const sync=()=>{const tg=[];x.content=raw.replace(/<think>([\s\S]*?)(?:<\/think>|$)/g,(_,t)=>{tg.push(t);return""}).trimStart();x.reasoning=(rs+tg.join("\n")).trim()||undefined};
+ for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});const L=buf.split("\n");buf=L.pop();
+  for(const ln of L){const t=ln.trim();if(!t.startsWith("data:"))continue;const d=t.slice(5).trim();if(d==="[DONE]")continue;
+   try{const j=JSON.parse(d);if(j.usage)x.usage={p:j.usage.prompt_tokens||0,c:j.usage.completion_tokens||0};const dl=j.choices?.[0]?.delta;if(!dl)continue;rs+=dl.reasoning_content||dl.reasoning||"";raw+=dl.content||"";sync();upd()}catch{}}}
+ sync();
+}
+async function runMulti(c,models){
+ const ai={role:"assistant",content:"",live:true,multi:models.map(model=>({model,content:""}))};
+ render();const el=bubble(ai,true);scrollDown();
+ ctrl=new AbortController();setBusy(true);
+ const sys=[agentOf(c).p,cfg.sys].filter(Boolean).join("\n\n");
+ let raf=0;const upd=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;el.innerHTML=bodyHtml(ai);scrollDown()})};
+ try{
+  const api=[{role:"system",content:sys},...await toApi(c.msgs.filter(m=>!m.err))];
+  await Promise.all(ai.multi.map(async x=>{
+   try{
+    const body={model:x.model,messages:api,stream:true,temperature:Number(cfg.temp)};
+    if(cfg.max)body.max_tokens=Number(cfg.max);if(cfg.json)body.response_format={type:"json_object"};
+    if(["openai","openrouter","orfree","groq","free"].includes(cfg.prov))body.stream_options={include_usage:true};
+    await streamTo(await post(body),x,upd);
+   }catch(e){if(e.name!=="AbortError")x.err=e instanceof TypeError?"تعذّر الاتصال.":e.message}
+   upd();
+  }));
+  delete ai.live;const ok=ai.multi.findIndex(x=>x.content);
+  if(ok<0){if(ctrl.signal.aborted)return;throw new Error(ai.multi.find(x=>x.err)?.err||"لم يصل رد من أي نموذج.")}
+  ai.pick=ok;ai.content=ai.multi[ok].content;c.msgs.push(ai);
+ }catch(e){c.msgs.push({role:"assistant",content:e.message,err:true})}
+ finally{ctrl=null;setBusy(false);save();render()}
+}
 function editMsg(i){
  const c=getChat();if(!c||ctrl)return;const m=c.msgs[i];
  const t=prompt("تعديل الرسالة",m.content);if(t===null||!t.trim())return;
- m.content=t.trim();c.msgs.length=i+1;save();run(c);
+ m.content=t.trim();c.msgs.length=i+1;save();go(c);
 }
 /* ===== المرفقات (بنفس شكل FileUIPart في Vercel AI SDK: {type:"file", mediaType, filename, url}) ===== */
 const TEXT_EXT=/\.(txt|md|json|csv|tsv|log|xml|html?|css|js|jsx|ts|tsx|py|java|c|cpp|h|cs|go|rs|php|rb|sh|sql|ya?ml|toml|ini|kt|swift)$/i;
@@ -453,12 +496,12 @@ async function send(){
  const um={role:"user",content:text};if(pending.length){um.files=pending;pending=[];renderAtts()}
  c.msgs.push(um);
  if(c.msgs.length===1)c.title=(text||um.files[0].filename||"مرفق").slice(0,40);
- inp.value="";inp.style.height="auto";save();if(/^\/image\s/i.test(text))genImage(c,text.replace(/^\/image\s+/i,""));else run(c);
+ inp.value="";inp.style.height="auto";save();if(/^\/image\s/i.test(text))genImage(c,text.replace(/^\/image\s+/i,""));else go(c);
 }
 function redo(){
  const c=getChat();if(!c||ctrl)return;
  while(c.msgs.length&&c.msgs[c.msgs.length-1].role!=="user")c.msgs.pop();
- if(c.msgs.length)run(c);
+ if(c.msgs.length)go(c);
 }
 const chatText=c=>`${c.title}\n\n`+c.msgs.map(m=>(m.role==="user"?"أنا: ":agentOf(c).n+": ")+m.content).join("\n\n");
 
@@ -469,20 +512,20 @@ function fillFree(list,sel){
  if(sel)$("#freeSel").value=sel;
 }
 function syncProvUI(){
- const free=$("#prov").value==="free";
+ const free=isFree($("#prov").value);
  $("#freeBox").hidden=!free;$("#modelBox").hidden=free;
- $("#keyLbl").textContent=free?"مفتاح AI Gateway (اختياري إن قبلت الخدمة بدونه)":"مفتاح API";
+ $("#keyLbl").textContent=$("#prov").value==="free"?"مفتاح AI Gateway (اختياري إن قبلت الخدمة بدونه)":"مفتاح API";
 }
 function openSettings(){
  const p=$("#prov");p.innerHTML=Object.entries(PROVIDERS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join("");
  kmap={...(cfg.keys||{}),[cfg.prov]:cfg.key};shown=cfg.prov;
  p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=kmap[shown]||"";$("#model").value=cfg.model;$("#sys").value=cfg.sys;
- fillFree(FREE.models,cfg.prov==="free"?cfg.model:FREE.models[0].id);syncProvUI();
- $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;$("#max").value=cfg.max||"";$("#tools").checked=!!cfg.tools;$("#img").value=cfg.img||"";$("#json").checked=!!cfg.json;$("#autot").checked=!!cfg.autot;
+ const fl=FREELIST[cfg.prov]||FREE.models;fillFree(fl,isFree(cfg.prov)?cfg.model:fl[0].id);syncProvUI();
+ $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;$("#max").value=cfg.max||"";$("#tools").checked=!!cfg.tools;$("#img").value=cfg.img||"";$("#json").checked=!!cfg.json;$("#autot").checked=!!cfg.autot;$("#multiOn").checked=!!cfg.multiOn;$("#multi").value=cfg.multi||"";
  $("#dlg").showModal();
 }
 $("#temp").oninput=e=>$("#tv").textContent=e.target.value;
-$("#prov").onchange=e=>{kmap[shown]=$("#key").value.trim();shown=e.target.value;$("#key").value=kmap[shown]||"";const v=PROVIDERS[shown];$("#url").value=v.u;$("#model").value=v.m;$("#models").innerHTML="";if(shown==="free")fillFree(FREE.models,FREE.models[0].id);syncProvUI()};
+$("#prov").onchange=e=>{kmap[shown]=$("#key").value.trim();shown=e.target.value;$("#key").value=kmap[shown]||"";const v=PROVIDERS[shown];$("#url").value=v.u;$("#model").value=v.m;$("#models").innerHTML="";if(isFree(shown)){fillFree(FREELIST[shown],FREELIST[shown][0].id);$("#getModels").click()}syncProvUI()};
 $("#getModels").onclick=async()=>{
  const b=$("#getModels");b.textContent="جارٍ الجلب…";
  try{
@@ -490,9 +533,9 @@ $("#getModels").onclick=async()=>{
   const r=await fetch($("#url").value.trim().replace(/\/$/,"")+"/models",{headers:key?{Authorization:"Bearer "+key}:{}});
   if(!r.ok)throw 0;const j=await r.json();
   const ids=(j.data||j.models||[]).map(m=>(m.id||m.name||"").replace(/^models\//,"")).filter(Boolean).sort();
-  if($("#prov").value==="free"){
+  if(isFree($("#prov").value)){
    const f=ids.filter(i=>/free/i.test(i));
-   fillFree(f.length?f.map(i=>({id:i,n:i})):FREE.models,$("#freeSel").value);
+   fillFree(f.length?f.map(i=>({id:i,n:i})):FREELIST[$("#prov").value],$("#freeSel").value);
    b.textContent=f.length?`تم جلب ${f.length} نموذجاً مجانياً`:"لم تظهر نماذج مجانية؛ بقيت القائمة الافتراضية";
   }else{
    $("#models").innerHTML=ids.map(i=>`<option value="${esc(i)}">`).join("");
@@ -501,7 +544,7 @@ $("#getModels").onclick=async()=>{
  }catch{b.textContent="تعذّر الجلب. أدخل اسم النموذج يدوياً."}
  setTimeout(()=>b.textContent="جلب قائمة النماذج",3500);
 };
-$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:prov==="free"?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked,img:$("#img").value.trim(),json:$("#json").checked,autot:$("#autot").checked};store.set("tt_cfg",cfg);$("#dlg").close();render()};
+$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:isFree(prov)?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked,img:$("#img").value.trim(),json:$("#json").checked,autot:$("#autot").checked,multiOn:$("#multiOn").checked,multi:$("#multi").value.trim()};store.set("tt_cfg",cfg);$("#dlg").close();render()};
 $("#cancel").onclick=()=>$("#dlg").close();
 $("#openSet").onclick=()=>{openSettings();closeSide()};
 $("#new").onclick=()=>{if(!ctrl)newChat()};
@@ -538,6 +581,7 @@ $("#wrap").addEventListener("click",e=>{
  if(a){
   if(a.dataset.a==="redo")redo();
   else if(a.dataset.a==="edit")editMsg(+a.dataset.i);
+  else if(a.dataset.a==="pick"){const c=getChat(),i=+a.closest(".msg").dataset.idx,m=c?.msgs[i];if(m?.multi&&!ctrl){m.pick=+a.dataset.k;m.content=m.multi[m.pick].content;save();render()}}
   else if(a.dataset.a==="del"){const c=getChat();if(c&&!ctrl){c.msgs.splice(+a.dataset.i,1);save();render()}}
   else if(a.dataset.a==="say"){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(a.closest(".msg").querySelector(".b").innerText);u.lang=/[؀-ۿ]/.test(u.text)?"ar":"en";speechSynthesis.speak(u)}
   else{const t=a.closest(".msg").querySelector(".b").innerText;navigator.clipboard?.writeText(t);a.textContent="تم النسخ";setTimeout(()=>a.textContent="نسخ",1200)}
