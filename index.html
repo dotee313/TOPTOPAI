@@ -110,6 +110,11 @@ dialog#dlg{max-height:90vh;overflow:auto}
 .files{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .files img{max-width:180px;max-height:140px;border-radius:10px;border:1px solid var(--line)}
 .fchip{font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 10px;direction:ltr}
+#mic{width:42px;height:42px;border-radius:12px;font-size:18px;display:grid;place-items:center;flex-shrink:0;color:var(--muted)}
+.think,.tool{margin:0 0 .6em;font-size:13.5px;color:var(--muted)}
+.think div{white-space:pre-wrap;padding:4px 0}
+.tool pre{font-size:12px;margin:.3em 0}
+.usage{font-size:12px;color:var(--muted);align-self:center;margin-inline-start:6px;direction:ltr}
 </style>
 </head>
 <body>
@@ -125,6 +130,7 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <div id="msgs"><div class="wrap" id="wrap"></div></div>
   <div id="bar"><div id="atts"></div><div id="box">
     <button id="attach" type="button" aria-label="إرفاق ملف أو صورة" title="إرفاق ملف أو صورة">📎</button>
+    <button id="mic" type="button" aria-label="إملاء صوتي" title="إملاء صوتي (OpenAI/Groq)">🎤</button>
     <input id="file" type="file" multiple hidden accept="image/*,application/pdf,text/*,.md,.json,.csv,.js,.ts,.py,.html,.css,.xml,.yml,.yaml,.java,.c,.cpp,.cs,.go,.rs,.php,.sh,.sql">
     <textarea id="in" rows="1" placeholder="اكتب رسالتك…" aria-label="الرسالة"></textarea>
     <button id="send" aria-label="إرسال">↑</button>
@@ -135,6 +141,8 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <h2>خيارات المحادثة</h2>
   <button class="btn ghost" id="rename">إعادة تسمية</button>
   <button class="btn ghost" id="share">مشاركة / نسخ المحادثة</button>
+  <button class="btn ghost" id="exp">تصدير المحادثات (JSON)</button>
+  <button class="btn ghost" id="imp">استيراد محادثات</button>
   <button class="btn ghost warn" id="clearAll">حذف كل المحادثات</button>
   <div class="row"><button class="btn ghost" id="moreClose">إغلاق</button></div>
 </dialog>
@@ -155,6 +163,9 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <div style="margin-top:6px"><button class="btn ghost sm" id="getModels" type="button">جلب قائمة النماذج</button></div>
   <label for="temp">الإبداعية (0 دقيق ← 2 مبدع): <span id="tv"></span></label>
   <input id="temp" class="f" type="range" min="0" max="2" step="0.1">
+  <label for="max">أقصى طول للرد بالتوكن (اختياري)</label>
+  <input id="max" class="f" type="number" min="1" placeholder="مثال: 2000">
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="tools" type="checkbox"> تفعيل الأدوات: طقس، حاسبة، الوقت، ويكيبيديا (يتطلب نموذجاً يدعم tool calling)</label>
   <label for="sys">تعليمات النظام (اختياري)</label>
   <textarea id="sys" class="f" placeholder="مثال: أجب بالعربية وباختصار."></textarea>
   <div class="hint links">احصل على مفتاح: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a><a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini</a></div>
@@ -250,7 +261,7 @@ function renderList(){
   l.appendChild(d);
  });
 }
-function bubble(m,live,last){
+function bubble(m,live,last,idx){
  const d=document.createElement("div");d.className="msg "+(m.role==="user"?"user":"ai")+(m.err?" err":"");
  const b=document.createElement("div");b.className="b";
  if(m.role==="user"){
@@ -260,13 +271,15 @@ function bubble(m,live,last){
     else{const sp=document.createElement("span");sp.className="fchip";sp.textContent=(img?"🖼 ":"📄 ")+(f.filename||"file");fs.appendChild(sp)}});
    b.appendChild(fs)}
   if(m.content){const t=document.createElement("div");t.textContent=m.content;b.appendChild(t)}
- }else{b.innerHTML=md(m.content||"");if(live)b.classList.add("cursor")}
+ }else{b.innerHTML=bodyHtml(m);if(live)b.classList.add("cursor")}
  d.appendChild(b);
  if(m.role!=="user"&&!live){
   const a=document.createElement("div");a.className="acts";
-  a.innerHTML=`<button data-a="copy">نسخ</button>${last?'<button data-a="redo">إعادة التوليد</button>':""}`;
+  a.innerHTML=`<button data-a="copy">نسخ</button><button data-a="say" aria-label="قراءة بصوت عالٍ">🔊</button>${last?'<button data-a="redo">إعادة التوليد</button>':""}${m.usage?`<span class="usage">↑${m.usage.p} ↓${m.usage.c}</span>`:""}`;
   d.appendChild(a);
  }
+
+ if(m.role==="user"&&idx!==undefined){const a=document.createElement("div");a.className="acts";a.innerHTML=`<button data-a="edit" data-i="${idx}">تعديل</button>`;d.appendChild(a)}
  $("#wrap").appendChild(d);return b;
 }
 function render(){
@@ -276,39 +289,87 @@ function render(){
  if(!c||!c.msgs.length){
   const ready=cfg.key||cfg.prov==="ollama"||cfg.prov==="free";
   w.innerHTML=`<div class="empty"><h1>كيف أساعدك اليوم؟</h1><p>${ready?"اختر مساعداً ثم اكتب رسالتك.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p><div class="agents">${Object.entries(AGENTS).map(([k,a])=>`<button class="agent${(c?c.agent:draftAgent)===k?" on":""}" data-ag="${k}"><b>${a.n}</b><span>${a.d}</span></button>`).join("")}</div></div>`;return}
- c.msgs.forEach((m,i)=>bubble(m,false,i===c.msgs.length-1&&m.role!=="user"));scrollDown();
+ c.msgs.forEach((m,i)=>bubble(m,false,i===c.msgs.length-1&&m.role!=="user",i));scrollDown();
 }
 const scrollDown=()=>{const m=$("#msgs");m.scrollTop=m.scrollHeight};
 function setBusy(b){const s=$("#send");s.textContent=b?"■":"↑";s.classList.toggle("stop",b);s.setAttribute("aria-label",b?"إيقاف":"إرسال")}
 
+/* ===== أدوات (Tool calling على طريقة AI SDK: tools + حلقة متعددة الخطوات) ===== */
+const jget=async u=>(await fetch(u)).json();
+const TOOLS={
+ get_weather:{d:"Get current weather for a city",p:{city:{type:"string"}},f:async({city})=>{const g=await jget("https://geocoding-api.open-meteo.com/v1/search?count=1&name="+encodeURIComponent(city));const p=g.results?.[0];if(!p)return{error:"city not found"};const w=await jget(`https://api.open-meteo.com/v1/forecast?current=temperature_2m,wind_speed_10m,weather_code&latitude=${p.latitude}&longitude=${p.longitude}`);return{city:p.name,country:p.country,...w.current}}},
+ calculator:{d:"Evaluate a math expression using + - * / % ^ ( )",p:{expression:{type:"string"}},f:({expression})=>/^[\d\s+\-*\/%^().]+$/.test(expression)?{result:Function('"use strict";return ('+expression.replace(/\^/g,"**")+")")()}:{error:"invalid expression"}},
+ current_time:{d:"Get the current date and time",p:{},f:()=>({iso:new Date().toISOString(),local:new Date().toString()})},
+ wikipedia:{d:"Search Wikipedia and return an intro summary",p:{query:{type:"string"},lang:{type:"string",enum:["ar","en"]}},f:async({query,lang})=>{const j=await jget(`https://${lang==="en"?"en":"ar"}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&exintro=1&explaintext=1&generator=search&gsrlimit=1&gsrsearch=`+encodeURIComponent(query));const pg=Object.values(j.query?.pages||{})[0];return pg?{title:pg.title,summary:(pg.extract||"").slice(0,1500)}:{error:"not found"}}}
+};
+const TOOL_DEFS=Object.entries(TOOLS).map(([name,t])=>({type:"function",function:{name,description:t.d,parameters:{type:"object",properties:t.p,required:Object.keys(t.p).filter(k=>k!=="lang")}}}));
+const toolHtml=t=>`<details class="tool"><summary>🔧 ${esc(t.name)}</summary><pre><code>${esc(JSON.stringify(t.args)+"\n→ "+(t.result===undefined?"…":JSON.stringify(t.result)))}</code></pre></details>`;
+const bodyHtml=m=>(m.reasoning?`<details class="think"${m.content?"":" open"}><summary>🧠 التفكير</summary><div>${esc(m.reasoning)}</div></details>`:"")+(m.tools||[]).map(toolHtml).join("")+md(m.content||"");
+async function post(body){
+ for(let a=0;;a++){
+  const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",signal:ctrl.signal,
+   headers:{"Content-Type":"application/json",...(cfg.key?{Authorization:"Bearer "+cfg.key}:{})},body:JSON.stringify(body)});
+  if((r.status===429||r.status>=500)&&a<2){await new Promise(x=>setTimeout(x,1000*2**a));continue}
+  if(!r.ok){let t="";try{const j=await r.json();t=j.error?.message||j[0]?.error?.message||""}catch{}
+   throw new Error(r.status===401?(cfg.prov==="free"?"هذه البوابة تتطلب مفتاح AI Gateway. أنشئ مفتاحاً مجانياً من حسابك في Vercel وأدخله في الإعدادات، أو استخدم مفتاحك الخاص مع مزوّد آخر.":"المفتاح غير صحيح أو منتهي. راجع الإعدادات."):r.status===429?(cfg.prov==="free"?"وصلت إلى حد استخدام النماذج المجانية. انتظر قليلاً أو جرّب نموذجاً آخر.":"تجاوزت الحد المسموح أو لا يوجد رصيد. جرّب لاحقاً أو غيّر النموذج."):`خطأ ${r.status}${t?": "+t:""}`)}
+  return r;
+ }
+}
 async function run(c){
  const ai={role:"assistant",content:""};
  render();const el=bubble(ai,true);scrollDown();
  ctrl=new AbortController();setBusy(true);
  const sys=[agentOf(c).p,cfg.sys].filter(Boolean).join("\n\n");
- let msgs;
+ let raw="",rsn="",raf=0;const u={p:0,c:0};
+ const sync=()=>{const tg=[];ai.content=raw.replace(/<think>([\s\S]*?)(?:<\/think>|$)/g,(_,t)=>{tg.push(t);return""}).trimStart();ai.reasoning=(rsn+tg.join("\n")).trim()||undefined};
+ const upd=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;sync();el.innerHTML=bodyHtml(ai);el.classList.add("cursor");scrollDown()})};
  try{
-  msgs=[{role:"system",content:sys},...await toApi(c.msgs.filter(m=>!m.err))];
-  const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",signal:ctrl.signal,
-   headers:{"Content-Type":"application/json",...(cfg.key?{Authorization:"Bearer "+cfg.key}:{})},
-   body:JSON.stringify({model:cfg.model,messages:msgs,stream:true,temperature:Number(cfg.temp)})});
-  if(!r.ok){let t="";try{const j=await r.json();t=j.error?.message||j[0]?.error?.message||""}catch{}
-   throw new Error(r.status===401?(cfg.prov==="free"?"هذه البوابة تتطلب مفتاح AI Gateway. أنشئ مفتاحاً مجانياً من حسابك في Vercel وأدخله في الإعدادات، أو استخدم مفتاحك الخاص مع مزوّد آخر.":"المفتاح غير صحيح أو منتهي. راجع الإعدادات."):r.status===429?(cfg.prov==="free"?"وصلت إلى حد استخدام النماذج المجانية. انتظر قليلاً أو جرّب نموذجاً آخر.":"تجاوزت الحد المسموح أو لا يوجد رصيد. جرّب لاحقاً أو غيّر النموذج."):`خطأ ${r.status}${t?": "+t:""}`)}
-  const rd=r.body.getReader(),dec=new TextDecoder();let buf="";
-  for(;;){
-   const {done,value}=await rd.read();if(done)break;
-   buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop();
-   for(const ln of lines){
-    const s=ln.trim();if(!s.startsWith("data:"))continue;const d=s.slice(5).trim();if(d==="[DONE]")continue;
-    try{const t=JSON.parse(d).choices?.[0]?.delta?.content;if(t){ai.content+=t;el.innerHTML=md(ai.content);el.classList.add("cursor");scrollDown()}}catch{}
+  const api=[{role:"system",content:sys},...await toApi(c.msgs.filter(m=>!m.err))];
+  for(let step=0;step<5;step++){
+   const body={model:cfg.model,messages:api,stream:true,temperature:Number(cfg.temp)};
+   if(cfg.max)body.max_tokens=Number(cfg.max);
+   if(cfg.tools)body.tools=TOOL_DEFS;
+   if(["openai","openrouter","groq","free"].includes(cfg.prov))body.stream_options={include_usage:true};
+   const r=await post(body);
+   const rd=r.body.getReader(),dec=new TextDecoder();let buf="",txt="";const calls={};
+   for(;;){
+    const {done,value}=await rd.read();if(done)break;
+    buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop();
+    for(const ln of lines){
+     const s=ln.trim();if(!s.startsWith("data:"))continue;const d=s.slice(5).trim();if(d==="[DONE]")continue;
+     try{const j=JSON.parse(d);
+      if(j.usage){u.p+=j.usage.prompt_tokens||0;u.c+=j.usage.completion_tokens||0}
+      const dl=j.choices?.[0]?.delta;if(!dl)continue;
+      const rs=dl.reasoning_content||dl.reasoning;if(rs)rsn+=rs;
+      if(dl.content){raw+=dl.content;txt+=dl.content}
+      for(const tc of dl.tool_calls||[]){const o=calls[tc.index??0]=calls[tc.index??0]||{id:"",name:"",args:""};if(tc.id)o.id=tc.id;if(tc.function?.name)o.name+=tc.function.name;if(tc.function?.arguments)o.args+=tc.function.arguments}
+      upd()
+     }catch{}
+    }
+   }
+   const cl=Object.values(calls).filter(x=>x.name);
+   if(!cl.length)break;
+   const ids=cl.map((x,i)=>x.id||"call_"+step+"_"+i);
+   api.push({role:"assistant",content:txt||null,tool_calls:cl.map((x,i)=>({id:ids[i],type:"function",function:{name:x.name,arguments:x.args||"{}"}}))});
+   for(const [i,x] of cl.entries()){
+    const t={name:x.name,args:{}};(ai.tools=ai.tools||[]).push(t);upd();
+    let res;try{t.args=JSON.parse(x.args||"{}");res=await TOOLS[x.name].f(t.args)}catch(e){res={error:String(e.message||e)}}
+    t.result=res;api.push({role:"tool",tool_call_id:ids[i],content:JSON.stringify(res)});upd()
    }
   }
-  if(!ai.content)throw new Error("لم يصل رد من النموذج. جرّب نموذجاً آخر.");
+  sync();if(u.p||u.c)ai.usage=u;
+  if(!ai.content&&!ai.tools?.length)throw new Error("لم يصل رد من النموذج. جرّب نموذجاً آخر.");
   c.msgs.push(ai);
  }catch(e){
+  sync();
   if(e.name==="AbortError"){if(ai.content)c.msgs.push(ai)}
   else{c.msgs.push({role:"assistant",content:e instanceof TypeError?"تعذّر الاتصال. تحقق من الإنترنت ومن عنوان API.":e.message,err:true})}
  }finally{ctrl=null;setBusy(false);save();render()}
+}
+function editMsg(i){
+ const c=getChat();if(!c||ctrl)return;const m=c.msgs[i];
+ const t=prompt("تعديل الرسالة",m.content);if(t===null||!t.trim())return;
+ m.content=t.trim();c.msgs.length=i+1;save();run(c);
 }
 /* ===== المرفقات (بنفس شكل FileUIPart في Vercel AI SDK: {type:"file", mediaType, filename, url}) ===== */
 const TEXT_EXT=/\.(txt|md|json|csv|tsv|log|xml|html?|css|js|jsx|ts|tsx|py|java|c|cpp|h|cs|go|rs|php|rb|sh|sql|ya?ml|toml|ini|kt|swift)$/i;
@@ -390,7 +451,7 @@ function openSettings(){
  kmap={...(cfg.keys||{}),[cfg.prov]:cfg.key};shown=cfg.prov;
  p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=kmap[shown]||"";$("#model").value=cfg.model;$("#sys").value=cfg.sys;
  fillFree(FREE.models,cfg.prov==="free"?cfg.model:FREE.models[0].id);syncProvUI();
- $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;
+ $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;$("#max").value=cfg.max||"";$("#tools").checked=!!cfg.tools;
  $("#dlg").showModal();
 }
 $("#temp").oninput=e=>$("#tv").textContent=e.target.value;
@@ -413,11 +474,26 @@ $("#getModels").onclick=async()=>{
  }catch{b.textContent="تعذّر الجلب. أدخل اسم النموذج يدوياً."}
  setTimeout(()=>b.textContent="جلب قائمة النماذج",3500);
 };
-$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:prov==="free"?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value};store.set("tt_cfg",cfg);$("#dlg").close();render()};
+$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:prov==="free"?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked};store.set("tt_cfg",cfg);$("#dlg").close();render()};
 $("#cancel").onclick=()=>$("#dlg").close();
 $("#openSet").onclick=()=>{openSettings();closeSide()};
 $("#new").onclick=()=>{if(!ctrl)newChat()};
 $("#send").onclick=send;
+let mr=null;
+$("#mic").onclick=async()=>{
+ if(mr){mr.stop();return}
+ if(!["openai","groq"].includes(cfg.prov)){alert("الإملاء الصوتي يعمل مع OpenAI أو Groq (Whisper).");return}
+ if(!cfg.key){openSettings();return}
+ try{const st=await navigator.mediaDevices.getUserMedia({audio:true}),ch=[];mr=new MediaRecorder(st);
+  mr.ondataavailable=e=>ch.push(e.data);
+  mr.onstop=async()=>{st.getTracks().forEach(t=>t.stop());$("#mic").textContent="🎤";mr=null;
+   try{const fd=new FormData();fd.append("file",new Blob(ch,{type:ch[0]?.type||"audio/webm"}),"a.webm");fd.append("model",cfg.prov==="groq"?"whisper-large-v3-turbo":"whisper-1");
+    const r=await fetch(cfg.url.replace(/\/$/,"")+"/audio/transcriptions",{method:"POST",headers:{Authorization:"Bearer "+cfg.key},body:fd});
+    const j=await r.json();if(!r.ok||!j.text)throw 0;const i=$("#in");i.value+=(i.value?" ":"")+j.text;i.focus()}catch{alert("فشل تحويل الصوت إلى نص.")}};
+  mr.start();$("#mic").textContent="⏹"}catch{alert("لا يوجد إذن للميكروفون.")}
+};
+$("#exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(chats.map(slim),null,1)],{type:"application/json"}));a.download="toptopai-chats.json";a.click();$("#more").close()};
+$("#imp").onclick=()=>{const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=async()=>{try{const j=JSON.parse(await i.files[0].text());if(!Array.isArray(j))throw 0;const ids=new Set(chats.map(c=>c.id));chats=[...j.filter(c=>c&&c.id&&Array.isArray(c.msgs)&&!ids.has(c.id)),...chats];save();render()}catch{alert("ملف غير صالح")}};i.click();$("#more").close()};
 $("#attach").onclick=()=>$("#file").click();
 $("#file").onchange=e=>{addFiles([...e.target.files]);e.target.value=""};
 $("#in").addEventListener("paste",e=>{const fs=[...(e.clipboardData?.files||[])];if(fs.length){e.preventDefault();addFiles(fs)}});
@@ -433,6 +509,8 @@ $("#wrap").addEventListener("click",e=>{
  const a=e.target.closest("[data-a]");
  if(a){
   if(a.dataset.a==="redo")redo();
+  else if(a.dataset.a==="edit")editMsg(+a.dataset.i);
+  else if(a.dataset.a==="say"){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(a.closest(".msg").querySelector(".b").innerText);u.lang=/[؀-ۿ]/.test(u.text)?"ar":"en";speechSynthesis.speak(u)}
   else{const t=a.closest(".msg").querySelector(".b").innerText;navigator.clipboard?.writeText(t);a.textContent="تم النسخ";setTimeout(()=>a.textContent="نسخ",1200)}
  }
 });
