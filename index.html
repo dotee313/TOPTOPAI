@@ -121,6 +121,7 @@ dialog#dlg{max-height:90vh;overflow:auto}
 <aside id="side" aria-label="المحادثات">
   <header><span class="brand">TOP<b>TOP</b>AI</span></header>
   <button id="new" class="btn">محادثة جديدة</button>
+  <input id="q" class="f" dir="rtl" placeholder="بحث في المحادثات" style="margin:0 16px 8px;width:calc(100% - 32px);direction:rtl;text-align:start">
   <nav id="list"></nav>
   <footer><button id="openSet" class="btn ghost" style="width:100%">الإعدادات</button></footer>
 </aside>
@@ -132,7 +133,7 @@ dialog#dlg{max-height:90vh;overflow:auto}
     <button id="attach" type="button" aria-label="إرفاق ملف أو صورة" title="إرفاق ملف أو صورة">📎</button>
     <button id="mic" type="button" aria-label="إملاء صوتي" title="إملاء صوتي (OpenAI/Groq)">🎤</button>
     <input id="file" type="file" multiple hidden accept="image/*,application/pdf,text/*,.md,.json,.csv,.js,.ts,.py,.html,.css,.xml,.yml,.yaml,.java,.c,.cpp,.cs,.go,.rs,.php,.sh,.sql">
-    <textarea id="in" rows="1" placeholder="اكتب رسالتك…" aria-label="الرسالة"></textarea>
+    <textarea id="in" rows="1" placeholder="اكتب رسالتك… (/image وصف لتوليد صورة)" aria-label="الرسالة"></textarea>
     <button id="send" aria-label="إرسال">↑</button>
   </div></div>
 </main>
@@ -163,6 +164,10 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <div style="margin-top:6px"><button class="btn ghost sm" id="getModels" type="button">جلب قائمة النماذج</button></div>
   <label for="temp">الإبداعية (0 دقيق ← 2 مبدع): <span id="tv"></span></label>
   <input id="temp" class="f" type="range" min="0" max="2" step="0.1">
+  <label for="img">نموذج توليد الصور (للأمر /image — OpenAI أو Gemini)</label>
+  <input id="img" class="f" placeholder="gpt-image-1">
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="json" type="checkbox"> وضع JSON (يجب أن يذكر طلبك كلمة JSON)</label>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="autot" type="checkbox"> عنوان تلقائي للمحادثة (طلب إضافي صغير)</label>
   <label for="max">أقصى طول للرد بالتوكن (اختياري)</label>
   <input id="max" class="f" type="number" min="1" placeholder="مثال: 2000">
   <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="tools" type="checkbox"> تفعيل الأدوات: طقس، حاسبة، الوقت، ويكيبيديا (يتطلب نموذجاً يدعم tool calling)</label>
@@ -252,8 +257,8 @@ function newChat(){
  const c={id:Date.now().toString(36),title:"محادثة جديدة",agent:draftAgent,msgs:[]};chats.unshift(c);cur=c.id;save();render();closeSide();$("#in").focus();return c;
 }
 function renderList(){
- const l=$("#list");l.innerHTML="";
- chats.forEach(c=>{
+ const l=$("#list");l.innerHTML="";const q=($("#q")?.value||"").trim();
+ chats.filter(c=>!q||c.title.includes(q)||c.msgs.some(m=>(m.content||"").includes(q))).forEach(c=>{
   const d=document.createElement("div");d.className="chat-item"+(c.id===cur?" on":"");
   d.innerHTML=`<button class="t">${esc(c.title)}</button><button class="x" aria-label="حذف">✕</button>`;
   d.querySelector(".t").onclick=()=>{if(ctrl)return;cur=c.id;save();render();closeSide()};
@@ -271,15 +276,15 @@ function bubble(m,live,last,idx){
     else{const sp=document.createElement("span");sp.className="fchip";sp.textContent=(img?"🖼 ":"📄 ")+(f.filename||"file");fs.appendChild(sp)}});
    b.appendChild(fs)}
   if(m.content){const t=document.createElement("div");t.textContent=m.content;b.appendChild(t)}
- }else{b.innerHTML=bodyHtml(m);if(live)b.classList.add("cursor")}
+ }else{b.innerHTML=bodyHtml(m);if(live)b.classList.add("cursor");(m.files||[]).forEach(f=>{if(f.url){const im=document.createElement("img");im.src=f.url;im.alt=f.filename||"";im.style.cssText="max-width:100%;border-radius:10px;margin-top:6px";b.appendChild(im)}})}
  d.appendChild(b);
  if(m.role!=="user"&&!live){
   const a=document.createElement("div");a.className="acts";
-  a.innerHTML=`<button data-a="copy">نسخ</button><button data-a="say" aria-label="قراءة بصوت عالٍ">🔊</button>${last?'<button data-a="redo">إعادة التوليد</button>':""}${m.usage?`<span class="usage">↑${m.usage.p} ↓${m.usage.c}</span>`:""}`;
+  a.innerHTML=`<button data-a="copy">نسخ</button><button data-a="say" aria-label="قراءة بصوت عالٍ">🔊</button>${idx!==undefined?`<button data-a="del" data-i="${idx}">حذف</button>`:""}${last?'<button data-a="redo">إعادة التوليد</button>':""}${m.usage?`<span class="usage">↑${m.usage.p} ↓${m.usage.c}</span>`:""}`;
   d.appendChild(a);
  }
 
- if(m.role==="user"&&idx!==undefined){const a=document.createElement("div");a.className="acts";a.innerHTML=`<button data-a="edit" data-i="${idx}">تعديل</button>`;d.appendChild(a)}
+ if(m.role==="user"&&idx!==undefined){const a=document.createElement("div");a.className="acts";a.innerHTML=`<button data-a="edit" data-i="${idx}">تعديل</button><button data-a="del" data-i="${idx}">حذف</button>`;d.appendChild(a)}
  $("#wrap").appendChild(d);return b;
 }
 function render(){
@@ -329,6 +334,7 @@ async function run(c){
    const body={model:cfg.model,messages:api,stream:true,temperature:Number(cfg.temp)};
    if(cfg.max)body.max_tokens=Number(cfg.max);
    if(cfg.tools)body.tools=TOOL_DEFS;
+   if(cfg.json)body.response_format={type:"json_object"};
    if(["openai","openrouter","groq","free"].includes(cfg.prov))body.stream_options={include_usage:true};
    const r=await post(body);
    const rd=r.body.getReader(),dec=new TextDecoder();let buf="",txt="";const calls={};
@@ -360,11 +366,32 @@ async function run(c){
   sync();if(u.p||u.c)ai.usage=u;
   if(!ai.content&&!ai.tools?.length)throw new Error("لم يصل رد من النموذج. جرّب نموذجاً آخر.");
   c.msgs.push(ai);
+  if(cfg.autot&&c.msgs.length<=2&&ai.content)autoTitle(c);
  }catch(e){
   sync();
   if(e.name==="AbortError"){if(ai.content)c.msgs.push(ai)}
   else{c.msgs.push({role:"assistant",content:e instanceof TypeError?"تعذّر الاتصال. تحقق من الإنترنت ومن عنوان API.":e.message,err:true})}
  }finally{ctrl=null;setBusy(false);save();render()}
+}
+const hdr=()=>({"Content-Type":"application/json",...(cfg.key?{Authorization:"Bearer "+cfg.key}:{})});
+async function autoTitle(c){
+ try{const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",headers:hdr(),body:JSON.stringify({model:cfg.model,max_tokens:24,stream:false,messages:[{role:"system",content:"Write a very short title (max 5 words) for this conversation, in the user's language. Output only the title."},{role:"user",content:(c.msgs[0].content||"").slice(0,300)}]})});
+  if(!r.ok)return;const t=((await r.json()).choices?.[0]?.message?.content||"").replace(/<think>[\s\S]*?<\/think>/g,"").replace(/["«»*#]/g,"").trim();
+  if(t&&t.length<60){c.title=t;save();renderList();if(cur===c.id)$("#ttl").textContent=t}
+ }catch{}
+}
+async function genImage(c,prompt){
+ ctrl=new AbortController();setBusy(true);
+ try{
+  const model=cfg.img||(cfg.prov==="gemini"?"imagen-3.0-generate-002":"gpt-image-1");
+  const body={model,prompt,n:1};if(!/^gpt-image/.test(model))body.response_format="b64_json";
+  const r=await fetch(cfg.url.replace(/\/$/,"")+"/images/generations",{method:"POST",signal:ctrl.signal,headers:hdr(),body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error?.message||j[0]?.error?.message||`خطأ ${r.status} — توليد الصور يحتاج مزوّداً ونموذجاً يدعمه (OpenAI أو Gemini).`);
+  const d=j.data?.[0];const url=d?.b64_json?"data:image/png;base64,"+d.b64_json:d?.url;if(!url)throw new Error("لم تصل صورة.");
+  c.msgs.push({role:"assistant",content:"🖼 "+prompt,files:[{type:"file",mediaType:"image/png",filename:"image.png",url}]});
+ }catch(e){if(e.name!=="AbortError")c.msgs.push({role:"assistant",content:e instanceof TypeError?"تعذّر الاتصال.":e.message,err:true})}
+ finally{ctrl=null;setBusy(false);save();render()}
 }
 function editMsg(i){
  const c=getChat();if(!c||ctrl)return;const m=c.msgs[i];
@@ -426,7 +453,7 @@ async function send(){
  const um={role:"user",content:text};if(pending.length){um.files=pending;pending=[];renderAtts()}
  c.msgs.push(um);
  if(c.msgs.length===1)c.title=(text||um.files[0].filename||"مرفق").slice(0,40);
- inp.value="";inp.style.height="auto";save();run(c);
+ inp.value="";inp.style.height="auto";save();if(/^\/image\s/i.test(text))genImage(c,text.replace(/^\/image\s+/i,""));else run(c);
 }
 function redo(){
  const c=getChat();if(!c||ctrl)return;
@@ -451,7 +478,7 @@ function openSettings(){
  kmap={...(cfg.keys||{}),[cfg.prov]:cfg.key};shown=cfg.prov;
  p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=kmap[shown]||"";$("#model").value=cfg.model;$("#sys").value=cfg.sys;
  fillFree(FREE.models,cfg.prov==="free"?cfg.model:FREE.models[0].id);syncProvUI();
- $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;$("#max").value=cfg.max||"";$("#tools").checked=!!cfg.tools;
+ $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;$("#max").value=cfg.max||"";$("#tools").checked=!!cfg.tools;$("#img").value=cfg.img||"";$("#json").checked=!!cfg.json;$("#autot").checked=!!cfg.autot;
  $("#dlg").showModal();
 }
 $("#temp").oninput=e=>$("#tv").textContent=e.target.value;
@@ -474,7 +501,7 @@ $("#getModels").onclick=async()=>{
  }catch{b.textContent="تعذّر الجلب. أدخل اسم النموذج يدوياً."}
  setTimeout(()=>b.textContent="جلب قائمة النماذج",3500);
 };
-$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:prov==="free"?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked};store.set("tt_cfg",cfg);$("#dlg").close();render()};
+$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:prov==="free"?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked,img:$("#img").value.trim(),json:$("#json").checked,autot:$("#autot").checked};store.set("tt_cfg",cfg);$("#dlg").close();render()};
 $("#cancel").onclick=()=>$("#dlg").close();
 $("#openSet").onclick=()=>{openSettings();closeSide()};
 $("#new").onclick=()=>{if(!ctrl)newChat()};
@@ -494,6 +521,7 @@ $("#mic").onclick=async()=>{
 };
 $("#exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(chats.map(slim),null,1)],{type:"application/json"}));a.download="toptopai-chats.json";a.click();$("#more").close()};
 $("#imp").onclick=()=>{const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=async()=>{try{const j=JSON.parse(await i.files[0].text());if(!Array.isArray(j))throw 0;const ids=new Set(chats.map(c=>c.id));chats=[...j.filter(c=>c&&c.id&&Array.isArray(c.msgs)&&!ids.has(c.id)),...chats];save();render()}catch{alert("ملف غير صالح")}};i.click();$("#more").close()};
+$("#q").oninput=renderList;
 $("#attach").onclick=()=>$("#file").click();
 $("#file").onchange=e=>{addFiles([...e.target.files]);e.target.value=""};
 $("#in").addEventListener("paste",e=>{const fs=[...(e.clipboardData?.files||[])];if(fs.length){e.preventDefault();addFiles(fs)}});
@@ -510,6 +538,7 @@ $("#wrap").addEventListener("click",e=>{
  if(a){
   if(a.dataset.a==="redo")redo();
   else if(a.dataset.a==="edit")editMsg(+a.dataset.i);
+  else if(a.dataset.a==="del"){const c=getChat();if(c&&!ctrl){c.msgs.splice(+a.dataset.i,1);save();render()}}
   else if(a.dataset.a==="say"){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(a.closest(".msg").querySelector(".b").innerText);u.lang=/[؀-ۿ]/.test(u.text)?"ar":"en";speechSynthesis.speak(u)}
   else{const t=a.closest(".msg").querySelector(".b").innerText;navigator.clipboard?.writeText(t);a.textContent="تم النسخ";setTimeout(()=>a.textContent="نسخ",1200)}
  }
