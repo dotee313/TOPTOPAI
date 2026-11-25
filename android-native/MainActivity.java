@@ -8,6 +8,8 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void load() {
         registerPlugin(ProxyRouterPlugin.class);
+        registerPlugin(VisionPlugin.class);
+        registerPlugin(InAppBrowserPlugin.class);
         super.load();
         WebView webView = getBridge().getWebView();
         webView.setWebViewClient(new ProxyWebViewClient(getBridge()));

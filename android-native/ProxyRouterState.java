@@ -28,6 +28,11 @@ import okhttp3.Route;
  */
 public final class ProxyRouterState {
     private static ProxyRouterState instance;
+    private static final OkHttpClient DIRECT = new OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build();
 
     public static final class Entry {
         public final String host;
@@ -164,6 +169,21 @@ public final class ProxyRouterState {
 
     /** Execute a request, trying the next proxy on failure. Caller owns the Response. */
     public Response execute(Request req) throws Exception {
+        // No proxy configured: use a direct OkHttp client. This also gives JS fetch()
+        // a CORS-free path inside the APK without requiring the user to set a proxy.
+        if (entries.isEmpty()) {
+            requests.incrementAndGet();
+            long t = System.currentTimeMillis();
+            try {
+                Response r = DIRECT.newCall(req).execute();
+                lastLatency = (int) (System.currentTimeMillis() - t);
+                return r;
+            } catch (Exception ex) {
+                lastLatency = -1;
+                throw ex;
+            }
+        }
+
         Exception last = null;
         int tries = Math.min(3, Math.max(1, entries.size()));
         for (int i = 0; i < tries; i++) {

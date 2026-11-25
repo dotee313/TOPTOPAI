@@ -138,6 +138,13 @@ dialog#dlg{max-height:90vh;overflow:auto}
 .seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .seg button{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--muted)}
 .seg button.on{border-color:var(--accent);color:var(--accent);background:var(--user)}
+/* Browser + vision */
+#visionBtn.busy{opacity:.55}
+#top .btn.sm{padding:5px 9px;font-size:15px}
+#browserDlg{width:min(660px,96vw)}
+#browserFrame{width:100%;height:min(62vh,540px);border:1px solid var(--line);border-radius:12px;background:var(--bg);margin-top:10px}
+#browserNote{font-size:12.5px;color:var(--muted);margin-top:6px}
+.visionReport{white-space:pre-wrap;font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px;max-height:180px;overflow:auto}
 </style>
 </head>
 <body>
@@ -158,11 +165,12 @@ dialog#dlg{max-height:90vh;overflow:auto}
 </aside>
 <div id="scrim"></div>
 <main id="main">
-  <div id="top"><button id="menu" aria-label="القائمة">☰</button><div class="title" id="ttl">محادثة جديدة</div><button id="ocModeBtn" hidden title="تبديل وضع OpenCode">وضع: تنفيذ</button><span id="agentChip" class="chip"></span><button id="moreBtn" class="btn ghost sm" aria-label="المزيد">⋯</button></div>
+  <div id="top"><button id="menu" aria-label="القائمة">☰</button><div class="title" id="ttl">محادثة جديدة</div><button id="ocModeBtn" hidden title="تبديل وضع OpenCode">وضع: تنفيذ</button><button id="browserBtn" class="btn ghost sm" title="متصفح داخلي" aria-label="متصفح داخلي">🌐</button><button id="visionBtn" class="btn ghost sm" title="تحليل صورة بالرؤية" aria-label="تحليل صورة">👁️</button><span id="agentChip" class="chip"></span><button id="moreBtn" class="btn ghost sm" aria-label="المزيد">⋯</button></div>
   <div id="msgs"><div class="wrap" id="wrap"></div></div>
   <div id="bar"><div id="atts"></div><div id="box">
     <button id="attach" type="button" aria-label="إرفاق ملف أو صورة" title="إرفاق ملف أو صورة">📎</button>
     <input id="file" type="file" multiple hidden accept="image/*,application/pdf,text/*,.md,.json,.csv,.js,.ts,.py,.html,.css,.xml,.yml,.yaml,.java,.c,.cpp,.cs,.go,.rs,.php,.sh,.sql">
+    <input id="visionFile" type="file" hidden accept="image/*">
     <textarea id="in" rows="1" placeholder="اكتب طلبك لـ OpenCode… (/plan أو /build أو /explore)" aria-label="الرسالة"></textarea>
     <button id="send" aria-label="إرسال">↑</button>
   </div></div>
@@ -179,7 +187,7 @@ dialog#dlg{max-height:90vh;overflow:auto}
 </dialog>
 <dialog id="dlg">
   <h2>إعدادات OpenCode</h2>
-  <div class="hint">هذا التطبيق مخصص لـ OpenCode وحده؛ لا يوجد مزوّد أو مفتاح API تُدخله. يعمل مباشرة عبر نموذج مدمج متاح للجميع، وقد تكون له حدود استخدام.</div>
+  <div class="hint">هذا التطبيق مخصص لـ OpenCode وحده؛ لا يوجد مزوّد أو مفتاح API تُدخله. يعمل مباشرة عبر نموذج مدمج متاح للجميع، وقد تكون له حدود استخدام. الرؤية تعمل محلياً على الجهاز، والمتصفح داخلي، وكلاهما يمرّ عبر البروكسي عند تفعيله.</div>
   <fieldset class="ocbox"><legend><svg class="ocico"><use href="#ico-opencode"/></svg>خيارات الوكيل</legend>
     <label for="ocMode">الوضع</label>
     <select id="ocMode" class="f"><option value="build">تنفيذ (Build)</option><option value="plan">تخطيط (Plan)</option><option value="explore">استكشاف (Explore)</option></select>
@@ -194,7 +202,7 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <input id="temp" class="f" type="range" min="0" max="2" step="0.1">
   <label for="max">أقصى طول للرد بالتوكن (اختياري)</label>
   <input id="max" class="f" type="number" min="1" placeholder="مثال: 2000">
-  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="tools" type="checkbox"> تفعيل الأدوات: طقس، حاسبة، الوقت، ويكيبيديا، التحقق من JSON</label>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="tools" type="checkbox"> تفعيل الأدوات: طقس، حاسبة، الوقت، ويكيبيديا، جلب صفحة ويب، التحقق من JSON</label>
   <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="autot" type="checkbox"> عنوان تلقائي للمحادثة (طلب إضافي صغير)</label>
   <div class="row"><button class="btn ghost" id="cancel">إغلاق</button><button class="btn" id="save">حفظ</button></div>
 </dialog>
@@ -217,13 +225,28 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <div class="hint">في المتصفح لا يمكن فتح اتصال بروكسي مباشر، لذلك تُستخدم بوابة تضع رابط الطلب مكان <code>{url}</code>. في تطبيق أندرويد يُوجَّه الطلب أصلاً عبر OkHttp.</div>
   <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost sm" id="pxTest" type="button">اختبار البروكسيات</button><button class="btn ghost sm" id="pxReset" type="button">تصفير الإحصاءات</button></div>
   <div id="pxStatus" class="pxstat">لم يُفعّل بعد.</div>
-  <div class="warn-box">يوجَّه هذا الخيار طلبات التطبيق نفسها فقط (الواجهة وطلبات API). لا يغيّر إعدادات نظام أندرويد، ولا يطلب صلاحية VPN، ولا يمرّر طلبات التطبيقات الأخرى.</div>
+  <div class="warn-box">يوجَّه هذا الخيار طلبات التطبيق نفسها (الواجهة وطلبات API والمتصفح الداخلي وجلب الصفحات) عبر البروكسيات التي تدخلها. في APK تعمل طلبات الشبكة عبر الموجّه الأصلي حتى دون تفعيل البروكسي، لكنها تذهب مباشرة حينها. لا يغيّر إعدادات نظام أندرويد، ولا يطلب صلاحية VPN، ولا يمرّر طلبات التطبيقات الأخرى.</div>
   <div class="row"><button class="btn ghost" id="pxCancel">إغلاق</button><button class="btn" id="pxSave">حفظ وتفعيل</button></div>
+</dialog>
+
+<dialog id="browserDlg">
+  <h2>متصفح داخلي</h2>
+  <div class="hint">افتح أي موقع داخل التطبيق. في APK يُستخدم WebView مستقل، وإذا فعّلت البروكسي فسيمرّ المتصفح عبره أيضاً.</div>
+  <label for="browserUrl">العنوان</label>
+  <input id="browserUrl" class="f" dir="ltr" placeholder="https://example.com">
+  <div class="row"><button class="btn ghost" id="browserCancel">إغلاق</button><button class="btn" id="browserGo">فتح</button></div>
+  <div id="browserFallback" hidden>
+    <iframe id="browserFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    <div id="browserNote">هذا عرض احتياطي داخل المتصفح؛ بعض المواقع تمنع العرض داخل إطار. في APK يُستخدم متصفح أصلي مستقل.</div>
+  </div>
 </dialog>
 
 <script>
 const $=s=>document.querySelector(s);
 const BUILTIN={url:"https://text.pollinations.ai/openai",model:"openai-fast"};
+const nativePlugin=name=>{try{if(!window.Capacitor||typeof window.Capacitor.isNativePlatform!=="function"||!window.Capacitor.isNativePlatform())return null;return window.Capacitor.registerPlugin(name)||null}catch(e){return null}};
+const VISION=nativePlugin("Vision");
+const BROWSER=nativePlugin("InAppBrowser");
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 let cfg=Object.assign({prov:"builtin",url:BUILTIN.url,key:"",model:BUILTIN.model,sys:"",temp:0.7,max:0,tools:true,autot:true,ocMode:"build",ocModel:"",ocExtra:""},store.get("tt_cfg",{}));
 // نسخة OpenCode خالصة: لا مفاتيح ولا مزوّدين قابلة للاختيار، حتى مع إعدادات قديمة محفوظة.
@@ -235,7 +258,7 @@ let cur=store.get("tt_cur",null);
 let ctrl=null;
 
 const AGENTS={
- opencode:{n:"OpenCode",d:"وكيل برمجة: تخطيط، تنفيذ، استكشاف",p:"أنت وكيل برمجة مستوحى من OpenCode. تعمل على الملفات والكود الذي يرفقه المستخدم. اقرأ قبل أن تعدّل، واذكر المسار ورقم السطر عند الإشارة إلى موضع. اكتب كوداً كاملاً قابلاً للتنفيذ، بلا حذف باسم «الاختصار»، ولا تحذف ملفات دون تأكيد صريح. اشرح باختصار بعد كل خطوة، واستخدم الأدوات المتاحة عندما تكون مفيدة. أجب بلغة المستخدم."}
+ opencode:{n:"OpenCode",d:"وكيل برمجة: تخطيط، تنفيذ، استكشاف",p:"أنت وكيل برمجة مستوحى من OpenCode. تعمل على الملفات والكود الذي يرفقه المستخدم. اقرأ قبل أن تعدّل، واذكر المسار ورقم السطر عند الإشارة إلى موضع. اكتب كوداً كاملاً قابلاً للتنفيذ، بلا حذف باسم «الاختصار»، ولا تحذف ملفات دون تأكيد صريح. اشرح باختصار بعد كل خطوة، واستخدم الأدوات المتاحة عندما تكون مفيدة، ومنها fetch_url لجلب صفحة ويب عامة. إذا أرفق المستخدم صورة فستجد تقرير رؤية محلياً داخل رسالته؛ استخدم ذلك الوصف ولا تفترض أنك ترى الصورة مباشرة. أجب بلغة المستخدم."}
 };
 const OC_MODES={
  build:{n:"تنفيذ",p:"الوضع الحالي: build. نفّذ المطلوب مباشرةً على الكود المرفق، وأعطِ رداً موجزاً يوضّح ما تغيّر. لا تكتب خطة مطوّلة إلا إذا طلب المستخدم ذلك."},
@@ -288,7 +311,7 @@ function md(src){
   return block(p);
  }).join("");
 }
-const slim=c=>({...c,msgs:c.msgs.map(m=>m.files?{...m,files:m.files.map(f=>({type:f.type,mediaType:f.mediaType,filename:f.filename}))}:m)});
+const slim=c=>({...c,msgs:c.msgs.map(m=>m.files?{...m,files:m.files.map(f=>({type:f.type,mediaType:f.mediaType,filename:f.filename,vision:f.vision?{summary:fmtVision(f.vision)}:undefined}))}:m)});
 const save=()=>{store.set("tt_chats",chats.map(slim));store.set("tt_cur",cur)};
 const getChat=()=>chats.find(c=>c.id===cur);
 const agentOf=c=>AGENTS[agentKey(c)];
@@ -344,11 +367,23 @@ function setBusy(b){const s=$("#send");s.textContent=b?"■":"↑";s.classList.t
 
 /* ===== أدوات (Tool calling على طريقة AI SDK: tools + حلقة متعددة الخطوات) ===== */
 const jget=async u=>(await fetch(u)).json();
+const htmlToText=h=>String(h||"")
+ .replace(/<script[\s\S]*?<\/script>/gi," ")
+ .replace(/<style[\s\S]*?<\/style>/gi," ")
+ .replace(/<noscript[\s\S]*?<\/noscript>/gi," ")
+ .replace(/<br\s*\/?>/gi,"\n")
+ .replace(/<\/(p|div|li|h[1-6]|tr|section|article)>/gi,"\n")
+ .replace(/<[^>]+>/g," ")
+ .replace(/&(nbsp|#160);/gi," ")
+ .replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">")
+ .replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'")
+ .replace(/[ \t]+/g," ").replace(/\n\s*\n\s*\n+/g,"\n\n").trim();
 const TOOLS={
  get_weather:{d:"Get current weather for a city",p:{city:{type:"string"}},f:async({city})=>{const g=await jget("https://geocoding-api.open-meteo.com/v1/search?count=1&name="+encodeURIComponent(city));const p=g.results?.[0];if(!p)return{error:"city not found"};const w=await jget(`https://api.open-meteo.com/v1/forecast?current=temperature_2m,wind_speed_10m,weather_code&latitude=${p.latitude}&longitude=${p.longitude}`);return{city:p.name,country:p.country,...w.current}}},
  calculator:{d:"Evaluate a math expression using + - * / % ^ ( )",p:{expression:{type:"string"}},f:({expression})=>/^[\d\s+\-*\/%^().]+$/.test(expression)?{result:Function('"use strict";return ('+expression.replace(/\^/g,"**")+")")()}:{error:"invalid expression"}},
  current_time:{d:"Get the current date and time",p:{},f:()=>({iso:new Date().toISOString(),local:new Date().toString()})},
  wikipedia:{d:"Search Wikipedia and return an intro summary",p:{query:{type:"string"},lang:{type:"string",enum:["ar","en"]}},q:["lang"],f:async({query,lang})=>{const j=await jget(`https://${lang==="en"?"en":"ar"}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&exintro=1&explaintext=1&generator=search&gsrlimit=1&gsrsearch=`+encodeURIComponent(query));const pg=Object.values(j.query?.pages||{})[0];return pg?{title:pg.title,summary:(pg.extract||"").slice(0,1500)}:{error:"not found"}}},
+ fetch_url:{d:"Fetch a public http(s) page and return readable text (uses the in-app router/proxy)",p:{url:{type:"string"},max_chars:{type:"number"}},q:["max_chars"],f:async({url,max_chars})=>{const u=String(url||"").trim();if(!/^https?:\/\//i.test(u))return{error:"Only http(s) URLs are allowed"};try{const r=await fetch(u,{headers:{"User-Agent":"Mozilla/5.0 (compatible; TOPTOPAI/1.0)"}});const h=await r.text();const title=(h.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||"";const text=htmlToText(h).slice(0,Math.min(Number(max_chars)||6000,20000));return{status:r.status,url:r.url||u,title:htmlToText(title).slice(0,200),text}}catch(e){return{error:String(e.message||e)}}}},
  json_validate:{d:"Validate and pretty-print a JSON string",p:{text:{type:"string"}},f:({text})=>{try{return{valid:true,value:JSON.parse(text)}}catch(e){return{valid:false,error:String(e.message||e)}}}},
  regex_match:{d:"Test a regular expression against a text and return matches",p:{pattern:{type:"string"},text:{type:"string"},flags:{type:"string"}},q:["flags"],f:({pattern,text,flags})=>{try{const m=[...(text||"").matchAll(new RegExp(pattern,flags||"g"))].slice(0,20);return{count:m.length,matches:m.map(x=>x[0])}}catch(e){return{error:String(e.message||e)}}}},
  todo:{d:"Record a short step-by-step implementation checklist",p:{items:{type:"array",items:{type:"string"}}},f:({items})=>({items:(items||[]).slice(0,12),note:"قائمة المهام سُجّلت في هذه الخطوة."})}
@@ -440,6 +475,26 @@ function imgToDataUrl(file){return new Promise((res,rej)=>{
   const cv=document.createElement("canvas");cv.width=w;cv.height=h;const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
   URL.revokeObjectURL(u);res(cv.toDataURL("image/jpeg",0.85))};
  im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
+function fmtVision(r){
+ if(!r)return "تعذّر تحليل الصورة.";
+ if(r.summary)return r.summary;
+ if(r.error)return "تعذّر التحليل: "+r.error;
+ const out=[];
+ out.push(`الأبعاد: ${r.width||"?"}×${r.height||"?"}`);
+ const labels=(r.labels||[]).map(x=>`${x.text} (${Math.round((x.confidence||0)*100)}%)`).slice(0,8);
+ if(labels.length)out.push("ما تحتويه الصورة: "+labels.join("، "));
+ const cols=(r.colors||[]).map(c=>`${c.hex} ${c.share||0}%`);
+ if(cols.length)out.push("أبرز الألوان: "+cols.join("، "));
+ const txt=(r.text||"").trim();
+ if(txt)out.push("نص مُستخرج من الصورة:\n"+txt.slice(0,1500));
+ const codes=(r.barcodes||[]).map(b=>b.url||b.raw).filter(Boolean);
+ if(codes.length)out.push("رموز/روابط في الصورة: "+codes.slice(0,5).join(" | "));
+ return out.join("\n");
+}
+async function analyzeVisionUrl(url){
+ if(!VISION)return{error:"تحليل الرؤية متاح في تطبيق أندرويد فقط."};
+ try{return await VISION.analyze({image:url})}catch(e){return{error:String(e.message||e)}}
+}
 async function addFiles(list){
  for(const f of list){
   if(pending.length>=5){alert("الحد الأقصى 5 مرفقات للرسالة الواحدة.");break}
@@ -462,16 +517,22 @@ function renderAtts(){
   box.appendChild(d);
  });
 }
-/* تحويل رسائل المحادثة إلى صيغة OpenAI المتوافقة (نص + image_url + file) */
+/* تحويل رسائل المحادثة إلى صيغة OpenAI المتوافقة (نص + تقرير رؤية محلي للصور + file) */
 async function toApi(list){
  const out=[];
  for(const m of list){
   if(m.role!=="user"||!m.files?.length){out.push({role:m.role,content:m.content});continue}
   let text=m.content||"";const parts=[];
   for(const f of m.files){
+   if(!f.url&&!f.vision){text+="\n[مرفق سابق غير متاح بعد إعادة تحميل الصفحة: "+(f.filename||"")+"]";continue}
+   if(f.mediaType.startsWith("image/")){
+    let v=f.vision;
+    if(!v&&f.url){v=await analyzeVisionUrl(f.url);f.vision=v}
+    text+="\n\n[تحليل بصري محلي لصورة "+(f.filename||"صورة")+"]\n"+fmtVision(v)+"\n";
+    continue;
+   }
    if(!f.url){text+="\n[مرفق سابق غير متاح بعد إعادة تحميل الصفحة: "+(f.filename||"")+"]";continue}
-   if(f.mediaType.startsWith("image/"))parts.push({type:"image_url",image_url:{url:f.url}});
-   else if(f.mediaType==="application/pdf")parts.push({type:"file",file:{filename:f.filename||"file.pdf",file_data:f.url}});
+   if(f.mediaType==="application/pdf")parts.push({type:"file",file:{filename:f.filename||"file.pdf",file_data:f.url}});
    else{const t=await (await fetch(f.url)).text();text+="\n\n[ملف: "+f.filename+"]\n```\n"+t+"\n```"}
   }
   out.push({role:"user",content:parts.length?[{type:"text",text:text||"(مرفق)"},...parts]:text});
@@ -519,6 +580,51 @@ $("#imp").onclick=()=>{const i=document.createElement("input");i.type="file";i.a
 $("#q").oninput=renderList;
 $("#attach").onclick=()=>$("#file").click();
 $("#file").onchange=e=>{addFiles([...e.target.files]);e.target.value=""};
+/* الرؤية: تحليل الصورة محلياً ثم حقن التقرير في حقل الإرسال */
+$("#visionBtn").onclick=()=>{if(!VISION){alert("تحليل الرؤية متاح في تطبيق أندرويد فقط.");return}$("#visionFile").click()};
+$("#visionFile").onchange=async e=>{
+ const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
+ const b=$("#visionBtn");b.classList.add("busy");b.textContent="⏳";
+ try{
+  const url=await imgToDataUrl(f);
+  const r=await analyzeVisionUrl(url);
+  if(pending.length<5)pending.push({type:"file",mediaType:"image/jpeg",filename:f.name,url,vision:r});
+  const inp=$("#in");
+  inp.value="[تحليل بصري محلي: "+(f.name||"صورة")+"]\n"+fmtVision(r)+"\n\n"+inp.value;
+  inp.focus();renderAtts();
+  if(r.error)alert("تعذّر التحليل: "+r.error);
+ }catch(err){alert("تعذّرت قراءة الصورة")}
+ finally{b.classList.remove("busy");b.textContent="👁️"}
+};
+/* المتصفح الداخلي */
+const openBrowser=()=>{
+ $("#browserUrl").value=store.get("tt_browser_url","https://www.google.com");
+ $("#browserFallback").hidden=!!BROWSER;
+ $("#browserDlg").showModal();
+ setTimeout(()=>$("#browserUrl").focus(),0);
+};
+$("#browserBtn").onclick=()=>{openBrowser();closeSide()};
+$("#browserCancel").onclick=()=>$("#browserDlg").close();
+$("#browserGo").onclick=()=>{
+ let u=$("#browserUrl").value.trim();if(!u)return;
+ if(!/^https?:\/\//i.test(u))u="https://"+u;
+ store.set("tt_browser_url",u);
+ if(BROWSER){
+  $("#browserDlg").close();
+  BROWSER.open({url:u}).catch(e=>alert("تعذّر فتح المتصفح: "+e));
+ }else{
+  $("#browserFallback").hidden=false;
+  $("#browserFrame").src=u;
+ }
+};
+window.ttBrowserSnapshot=data=>{
+ try{
+  store.set("tt_browser_url",data.url||store.get("tt_browser_url",""));
+  const inp=$("#in");
+  inp.value="[محتوى صفحة: "+(data.title||"صفحة")+"]\nالرابط: "+(data.url||"")+"\n"+(data.text||"").slice(0,8000)+"\n\n"+inp.value;
+  inp.focus();
+ }catch(e){}
+};
 $("#in").addEventListener("paste",e=>{const fs=[...(e.clipboardData?.files||[])];if(fs.length){e.preventDefault();addFiles(fs)}});
 $("#box").addEventListener("dragover",e=>e.preventDefault());
 $("#box").addEventListener("drop",e=>{e.preventDefault();addFiles([...e.dataTransfer.files])});
@@ -603,7 +709,7 @@ const baseFetch=window.fetch.bind(window);
 window.fetch=function(input,init){
  try{
   const u=typeof input==="string"?input:(input&&input.url)||"";
-  if(!px.enabled||!/^https?:\/\//i.test(u)||u.indexOf(location.origin)===0)return baseFetch(input,init);
+  if(!/^https?:\/\//i.test(u)||u.indexOf(location.origin)===0)return baseFetch(input,init);
   if(PX){
    if(init&&init.body&&typeof init.body!=="string")return baseFetch(input,init);
    const headers={};const ih=(init&&init.headers)||{};
