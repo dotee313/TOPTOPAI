@@ -119,19 +119,45 @@ dialog#dlg{max-height:90vh;overflow:auto}
 .mcard.on{border-color:var(--accent)}.mcard.err{color:var(--danger)}
 .mh{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);direction:ltr;margin-bottom:4px}
 .pk{font-size:12.5px;color:var(--accent)}
+/* OpenCode */
+.ocico{width:19px;height:19px;vertical-align:-4px;margin-inline-end:5px;flex-shrink:0}
+.agent.oc{background:linear-gradient(135deg,#151A2E,#241B3A);border-color:#4B3B7A;color:#F2EDFF}
+.agent.oc span{color:#B9A9E8}
+.agent.oc b{color:#fff}
+.ocbox{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:14px}
+.ocbox legend{font-size:14px;font-weight:600;padding:0 6px;color:var(--ink)}
+#ocModeBtn{font-size:13px;padding:5px 10px;border-radius:8px;border:1px solid #4B3B7A;background:#241B3A;color:#EDE6FF;white-space:nowrap}
+/* Proxy */
+#pxFoot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+#pxFoot .btn{flex:1;padding:9px 6px;font-size:14px}
+#proxyDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-inline-end:5px;vertical-align:1px}
+#proxyDot.on{background:#2BB3BF;box-shadow:0 0 0 3px #2bb3bf33}
+#proxyDot.err{background:var(--danger)}
+.pxstat{background:var(--bg);border-radius:10px;padding:8px 12px;margin-top:10px;font-size:13px;direction:ltr;text-align:start;white-space:pre-wrap;word-break:break-word}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.seg button{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--muted)}
+.seg button.on{border-color:var(--accent);color:var(--accent);background:var(--user)}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ico-opencode" viewBox="0 0 64 64">
+    <rect x="3" y="7" width="58" height="50" rx="14" fill="#151A2E"/>
+    <rect x="3" y="7" width="58" height="50" rx="14" fill="none" stroke="#4B3B7A" stroke-width="2"/>
+    <path d="M22 23 12 32l10 9M42 23l10 9-10 9" fill="none" stroke="#A78BFA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m37 19-10 26" fill="none" stroke="#FCA311" stroke-width="5" stroke-linecap="round"/>
+  </symbol>
+</svg>
 <aside id="side" aria-label="المحادثات">
   <header><span class="brand">TOP<b>TOP</b>AI</span></header>
   <button id="new" class="btn">محادثة جديدة</button>
   <input id="q" class="f" dir="rtl" placeholder="بحث في المحادثات" style="margin:0 16px 8px;width:calc(100% - 32px);direction:rtl;text-align:start">
   <nav id="list"></nav>
-  <footer><button id="openSet" class="btn ghost" style="width:100%">الإعدادات</button></footer>
+  <footer id="pxFoot"><button id="openSet" class="btn ghost">الإعدادات</button><button id="openProxy" class="btn ghost"><span id="proxyDot"></span>البروكسي</button></footer>
 </aside>
 <div id="scrim"></div>
 <main id="main">
-  <div id="top"><button id="menu" aria-label="القائمة">☰</button><div class="title" id="ttl">محادثة جديدة</div><span id="agentChip" class="chip"></span><button id="moreBtn" class="btn ghost sm" aria-label="المزيد">⋯</button></div>
+  <div id="top"><button id="menu" aria-label="القائمة">☰</button><div class="title" id="ttl">محادثة جديدة</div><button id="ocModeBtn" hidden title="تبديل وضع OpenCode">وضع: تنفيذ</button><span id="agentChip" class="chip"></span><button id="moreBtn" class="btn ghost sm" aria-label="المزيد">⋯</button></div>
   <div id="msgs"><div class="wrap" id="wrap"></div></div>
   <div id="bar"><div id="atts"></div><div id="box">
     <button id="attach" type="button" aria-label="إرفاق ملف أو صورة" title="إرفاق ملف أو صورة">📎</button>
@@ -174,6 +200,16 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <input id="img" class="f" placeholder="gpt-image-1">
   <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="json" type="checkbox"> وضع JSON (يجب أن يذكر طلبك كلمة JSON)</label>
   <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="autot" type="checkbox"> عنوان تلقائي للمحادثة (طلب إضافي صغير)</label>
+  <fieldset class="ocbox"><legend><svg class="ocico"><use href="#ico-opencode"/></svg>خيارات OpenCode</legend>
+    <label for="ocMode">الوضع</label>
+    <select id="ocMode" class="f"><option value="build">تنفيذ (Build)</option><option value="plan">تخطيط (Plan)</option><option value="explore">استكشاف (Explore)</option></select>
+    <label for="ocModel">نموذج مخصص لـ OpenCode (اختياري)</label>
+    <input id="ocModel" class="f" dir="ltr" placeholder="مثال: qwen2.5-coder:32b">
+    <label for="ocExtra">تعليمات إضافية للوكيل</label>
+    <textarea id="ocExtra" class="f" placeholder="مثال: لا تستخدم مكتبات خارجية، واكتب تعليقات بالعربية."></textarea>
+    <div class="seg" id="ocSeg"><button data-ocm="build">تنفيذ</button><button data-ocm="plan">تخطيط</button><button data-ocm="explore">استكشاف</button></div>
+    <div class="hint">اختصارات سريعة في المحادثة: <code>/plan</code> <code>/build</code> <code>/explore</code>. النموذج المخصص يُطبَّق فقط عند اختيار مساعد OpenCode.</div>
+  </fieldset>
   <label for="max">أقصى طول للرد بالتوكن (اختياري)</label>
   <input id="max" class="f" type="number" min="1" placeholder="مثال: 2000">
   <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="tools" type="checkbox"> تفعيل الأدوات: طقس، حاسبة، الوقت، ويكيبيديا (يتطلب نموذجاً يدعم tool calling)</label>
@@ -182,6 +218,28 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <div class="hint links">احصل على مفتاح: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a><a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini</a></div>
   <div class="hint">يُحفظ المفتاح في هذا المتصفح فقط، ويُرسل مباشرة إلى المزوّد الذي تختاره.</div>
   <div class="row"><button class="btn ghost" id="cancel">إغلاق</button><button class="btn" id="save">حفظ</button></div>
+</dialog>
+
+<dialog id="proxyDlg">
+  <h2>البروكسي — بديل VPN داخل التطبيق</h2>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="pxOn" type="checkbox"> تفعيل توجيه طلبات التطبيق عبر البروكسي</label>
+  <label for="pxMode">استراتيجية التبديل</label>
+  <select id="pxMode" class="f">
+    <option value="failover">التتابع عند الفشل (موصى به)</option>
+    <option value="round_robin">تناوب على كل طلب</option>
+    <option value="random">عشوائي</option>
+    <option value="single">بروكسي واحد فقط</option>
+  </select>
+  <label for="pxList">قائمة البروكسيات — سطر لكل بروكسي</label>
+  <textarea id="pxList" class="f" dir="ltr" rows="6" placeholder="proxy.example.com:8080:user:pass:http&#10;eu.proxy.net:3128:::http&#10;socks.example.com:1080:user:pass:socks"></textarea>
+  <div class="hint">الصيغة: <code>المضيف:المنفذ[:المستخدم:كلمة_المرور[:http|socks]]</code>. تُحفظ القائمة على الجهاز فقط، ولا تُرسل إلى أي خادم.</div>
+  <label for="pxGate">بوابات بديلة للمتصفح (غير مطلوبة في APK)</label>
+  <textarea id="pxGate" class="f" dir="ltr" rows="2" placeholder="https://your-proxy.example.com/?url={url}"></textarea>
+  <div class="hint">في المتصفح لا يمكن فتح اتصال بروكسي مباشر، لذلك تُستخدم بوابة تضع رابط الطلب مكان <code>{url}</code>. في تطبيق أندرويد يُوجَّه الطلب أصلاً عبر OkHttp.</div>
+  <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost sm" id="pxTest" type="button">اختبار البروكسيات</button><button class="btn ghost sm" id="pxReset" type="button">تصفير الإحصاءات</button></div>
+  <div id="pxStatus" class="pxstat">لم يُفعّل بعد.</div>
+  <div class="warn-box">يوجَّه هذا الخيار طلبات التطبيق نفسها فقط (الواجهة وطلبات API). لا يغيّر إعدادات نظام أندرويد، ولا يطلب صلاحية VPN، ولا يمرّر طلبات التطبيقات الأخرى.</div>
+  <div class="row"><button class="btn ghost" id="pxCancel">إغلاق</button><button class="btn" id="pxSave">حفظ وتفعيل</button></div>
 </dialog>
 
 <script>
@@ -203,7 +261,7 @@ const PROVIDERS={
  custom:{n:"مخصص (متوافق مع OpenAI)",u:"",m:""}
 };
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-let cfg=Object.assign({prov:"openrouter",url:PROVIDERS.openrouter.u,key:"",model:PROVIDERS.openrouter.m,sys:"",temp:0.7},store.get("tt_cfg",{}));
+let cfg=Object.assign({prov:"openrouter",url:PROVIDERS.openrouter.u,key:"",model:PROVIDERS.openrouter.m,sys:"",temp:0.7,ocMode:"build",ocModel:"",ocExtra:""},store.get("tt_cfg",{}));
 cfg.keys=cfg.keys||{[cfg.prov]:cfg.key||""};
 let pending=[];
 let draftAgent=store.get("tt_agent","general");
@@ -218,8 +276,23 @@ const AGENTS={
  summarizer:{n:"ملخّص",d:"اختصار النصوص الطويلة",p:"لخّص ما يرسله المستخدم في نقاط قصيرة، ثم اختم بجملة خلاصة واحدة."},
  writer:{n:"كاتب",d:"صياغة وتحسين النصوص",p:"أنت كاتب محترف. حسّن الصياغة، واقترح عناوين ونصوصاً مقنعة بأسلوب سليم وسلس، وحافظ على المعنى."},
  tutor:{n:"معلّم",d:"شرح خطوة بخطوة",p:"أنت معلّم صبور. اشرح بخطوات بسيطة وأمثلة، ثم اطرح سؤالاً واحداً للتأكد من الفهم."},
- analyst:{n:"محلّل",d:"أرقام وأعمال وقرارات",p:"أنت محلل بيانات وأعمال. فكّر بالأرقام، اذكر افتراضاتك، وقدّم توصيات واضحة قابلة للتنفيذ."}
+ analyst:{n:"محلّل",d:"أرقام وأعمال وقرارات",p:"أنت محلل بيانات وأعمال. فكّر بالأرقام، اذكر افتراضاتك، وقدّم توصيات واضحة قابلة للتنفيذ."},
+  opencode:{n:"OpenCode",d:"وكيل برمجة: تخطيط، تنفيذ، استكشاف",p:"أنت وكيل برمجة مستوحى من OpenCode. تعمل على الملفات والكود الذي يرفقه المستخدم. اقرأ قبل أن تعدّل، واذكر المسار ورقم السطر عند الإشارة إلى موضع. اكتب كوداً كاملاً قابلاً للتنفيذ، بلا حذف باسم «الاختصار»، ولا تحذف ملفات دون تأكيد صريح. اشرح باختصار بعد كل خطوة، واستخدم الأدوات المتاحة عندما تكون مفيدة. أجب بلغة المستخدم."}
 };
+const OC_MODES={
+ build:{n:"تنفيذ",p:"الوضع الحالي: build. نفّذ المطلوب مباشرةً على الكود المرفق، وأعطِ رداً موجزاً يوضّح ما تغيّر. لا تكتب خطة مطوّلة إلا إذا طلب المستخدم ذلك."},
+ plan:{n:"تخطيط",p:"الوضع الحالي: plan. حلّل المطلوب أولاً، ثم اكتب خطة مرقّمة موجزة تشمل الملفات المتأثرة والنقاط الحرجة والاختبارات المقترحة. لا تكتب الكود النهائي قبل موافقة المستخدم."},
+ explore:{n:"استكشاف",p:"الوضع الحالي: explore. استكشف الكود المرفق وارسم خريطة مختصرة للبنية والاعتماديات ونقاط الدخول، مع الإشارة إلى مسار الملف ورقم السطر. لا تعدّل أي شيء."}
+};
+const agentKey=c=>((c&&c.agent)||draftAgent)||"general";
+function agentPrompt(k){
+ const base=(AGENTS[k]||AGENTS.general).p;
+ if(k!=="opencode")return base;
+ const m=OC_MODES[cfg.ocMode]||OC_MODES.build;
+ return [base,m.p,"التاريخ اليوم: "+new Date().toISOString().slice(0,10),cfg.ocExtra||""].filter(Boolean).join("\n\n");
+}
+const ocOn=c=>agentKey(c)==="opencode";
+function syncOcSeg(){document.querySelectorAll("#ocSeg [data-ocm]").forEach(b=>b.classList.toggle("on",b.dataset.ocm===(cfg.ocMode||"build")))}
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function inline(t){
  return esc(t).replace(/`([^`]+)`/g,"<code>$1</code>")
@@ -300,10 +373,13 @@ function bubble(m,live,last,idx){
 function render(){
  renderList();const c=getChat();const w=$("#wrap");w.innerHTML="";
  const ag=agentOf(c);
- $("#ttl").textContent=c?c.title:"محادثة جديدة";$("#agentChip").textContent=ag.n;
+ $("#ttl").textContent=c?c.title:"محادثة جديدة";
+ $("#agentChip").innerHTML=(ocOn(c)?'<svg class="ocico"><use href="#ico-opencode"/></svg>':"")+esc(ag.n);
+ $("#ocModeBtn").hidden=!ocOn(c);
+ $("#ocModeBtn").textContent="وضع: "+(OC_MODES[cfg.ocMode]||OC_MODES.build).n;
  if(!c||!c.msgs.length){
   const ready=cfg.key||cfg.prov==="ollama"||cfg.prov==="free";
-  w.innerHTML=`<div class="empty"><h1>كيف أساعدك اليوم؟</h1><p>${ready?"اختر مساعداً ثم اكتب رسالتك.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p><div class="agents">${Object.entries(AGENTS).map(([k,a])=>`<button class="agent${(c?c.agent:draftAgent)===k?" on":""}" data-ag="${k}"><b>${a.n}</b><span>${a.d}</span></button>`).join("")}</div></div>`;return}
+  w.innerHTML=`<div class="empty"><h1>كيف أساعدك اليوم؟</h1><p>${ready?"اختر مساعداً ثم اكتب رسالتك.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p><div class="agents">${Object.entries(AGENTS).map(([k,a])=>`<button class="agent${k==="opencode"?" oc":""}${(c?c.agent:draftAgent)===k?" on":""}" data-ag="${k}">${k==="opencode"?'<svg class="ocico"><use href="#ico-opencode"/></svg>':""}<b>${a.n}</b><span>${a.d}</span></button>`).join("")}</div></div>`;return}
  c.msgs.forEach((m,i)=>bubble(m,false,i===c.msgs.length-1&&m.role!=="user",i));scrollDown();
 }
 const scrollDown=()=>{const m=$("#msgs");m.scrollTop=m.scrollHeight};
@@ -315,9 +391,12 @@ const TOOLS={
  get_weather:{d:"Get current weather for a city",p:{city:{type:"string"}},f:async({city})=>{const g=await jget("https://geocoding-api.open-meteo.com/v1/search?count=1&name="+encodeURIComponent(city));const p=g.results?.[0];if(!p)return{error:"city not found"};const w=await jget(`https://api.open-meteo.com/v1/forecast?current=temperature_2m,wind_speed_10m,weather_code&latitude=${p.latitude}&longitude=${p.longitude}`);return{city:p.name,country:p.country,...w.current}}},
  calculator:{d:"Evaluate a math expression using + - * / % ^ ( )",p:{expression:{type:"string"}},f:({expression})=>/^[\d\s+\-*\/%^().]+$/.test(expression)?{result:Function('"use strict";return ('+expression.replace(/\^/g,"**")+")")()}:{error:"invalid expression"}},
  current_time:{d:"Get the current date and time",p:{},f:()=>({iso:new Date().toISOString(),local:new Date().toString()})},
- wikipedia:{d:"Search Wikipedia and return an intro summary",p:{query:{type:"string"},lang:{type:"string",enum:["ar","en"]}},f:async({query,lang})=>{const j=await jget(`https://${lang==="en"?"en":"ar"}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&exintro=1&explaintext=1&generator=search&gsrlimit=1&gsrsearch=`+encodeURIComponent(query));const pg=Object.values(j.query?.pages||{})[0];return pg?{title:pg.title,summary:(pg.extract||"").slice(0,1500)}:{error:"not found"}}}
+ wikipedia:{d:"Search Wikipedia and return an intro summary",p:{query:{type:"string"},lang:{type:"string",enum:["ar","en"]}},q:["lang"],f:async({query,lang})=>{const j=await jget(`https://${lang==="en"?"en":"ar"}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&exintro=1&explaintext=1&generator=search&gsrlimit=1&gsrsearch=`+encodeURIComponent(query));const pg=Object.values(j.query?.pages||{})[0];return pg?{title:pg.title,summary:(pg.extract||"").slice(0,1500)}:{error:"not found"}}},
+ json_validate:{d:"Validate and pretty-print a JSON string",p:{text:{type:"string"}},f:({text})=>{try{return{valid:true,value:JSON.parse(text)}}catch(e){return{valid:false,error:String(e.message||e)}}}},
+ regex_match:{d:"Test a regular expression against a text and return matches",p:{pattern:{type:"string"},text:{type:"string"},flags:{type:"string"}},q:["flags"],f:({pattern,text,flags})=>{try{const m=[...(text||"").matchAll(new RegExp(pattern,flags||"g"))].slice(0,20);return{count:m.length,matches:m.map(x=>x[0])}}catch(e){return{error:String(e.message||e)}}}},
+ todo:{d:"Record a short step-by-step implementation checklist",p:{items:{type:"array",items:{type:"string"}}},f:({items})=>({items:(items||[]).slice(0,12),note:"قائمة المهام سُجّلت في هذه الخطوة."})}
 };
-const TOOL_DEFS=Object.entries(TOOLS).map(([name,t])=>({type:"function",function:{name,description:t.d,parameters:{type:"object",properties:t.p,required:Object.keys(t.p).filter(k=>k!=="lang")}}}));
+const TOOL_DEFS=Object.entries(TOOLS).map(([name,t])=>({type:"function",function:{name,description:t.d,parameters:{type:"object",properties:t.p,required:Object.keys(t.p).filter(k=>!(t.q||[]).includes(k))}}}));
 const toolHtml=t=>`<details class="tool"><summary>🔧 ${esc(t.name)}</summary><pre><code>${esc(JSON.stringify(t.args)+"\n→ "+(t.result===undefined?"…":JSON.stringify(t.result)))}</code></pre></details>`;
 const bodyHtml=m=>m.multi?m.multi.map((x,k)=>`<div class="mcard${m.pick===k?" on":""}${x.err?" err":""}"><div class="mh"><b>${esc(x.model)}</b>${x.usage?`<span>↑${x.usage.p} ↓${x.usage.c}</span>`:""}</div>${x.err?esc(x.err):bodyHtml(x)}${!m.live&&!x.err&&x.content?(m.pick===k?'<span class="pk">✓ المعتمد في سياق المحادثة</span>':`<button class="pk" data-a="pick" data-k="${k}">اعتمد هذا الرد</button>`):""}</div>`).join(""):(m.reasoning?`<details class="think"${m.content?"":" open"}><summary>🧠 التفكير</summary><div>${esc(m.reasoning)}</div></details>`:"")+(m.tools||[]).map(toolHtml).join("")+md(m.content||"");
 async function post(body){
@@ -334,14 +413,15 @@ async function run(c){
  const ai={role:"assistant",content:""};
  render();const el=bubble(ai,true);scrollDown();
  ctrl=new AbortController();setBusy(true);
- const sys=[agentOf(c).p,cfg.sys].filter(Boolean).join("\n\n");
+ const sys=[agentPrompt(agentKey(c)),cfg.sys].filter(Boolean).join("\n\n");
+ const useModel=(ocOn(c)&&cfg.ocModel)?cfg.ocModel:cfg.model;
  let raw="",rsn="",raf=0;const u={p:0,c:0};
  const sync=()=>{const tg=[];ai.content=raw.replace(/<think>([\s\S]*?)(?:<\/think>|$)/g,(_,t)=>{tg.push(t);return""}).trimStart();ai.reasoning=(rsn+tg.join("\n")).trim()||undefined};
  const upd=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;sync();el.innerHTML=bodyHtml(ai);el.classList.add("cursor");scrollDown()})};
  try{
   const api=[{role:"system",content:sys},...await toApi(c.msgs.filter(m=>!m.err))];
   for(let step=0;step<5;step++){
-   const body={model:cfg.model,messages:api,stream:true,temperature:Number(cfg.temp)};
+   const body={model:useModel,messages:api,stream:true,temperature:Number(cfg.temp)};
    if(cfg.max)body.max_tokens=Number(cfg.max);
    if(cfg.tools)body.tools=TOOL_DEFS;
    if(cfg.json)body.response_format={type:"json_object"};
@@ -417,13 +497,13 @@ async function runMulti(c,models){
  const ai={role:"assistant",content:"",live:true,multi:models.map(model=>({model,content:""}))};
  render();const el=bubble(ai,true);scrollDown();
  ctrl=new AbortController();setBusy(true);
- const sys=[agentOf(c).p,cfg.sys].filter(Boolean).join("\n\n");
+ const sys=[agentPrompt(agentKey(c)),cfg.sys].filter(Boolean).join("\n\n");
  let raf=0;const upd=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;el.innerHTML=bodyHtml(ai);scrollDown()})};
  try{
   const api=[{role:"system",content:sys},...await toApi(c.msgs.filter(m=>!m.err))];
   await Promise.all(ai.multi.map(async x=>{
    try{
-    const body={model:x.model,messages:api,stream:true,temperature:Number(cfg.temp)};
+    const body={model:(ocOn(c)&&cfg.ocModel)?cfg.ocModel:x.model,messages:api,stream:true,temperature:Number(cfg.temp)};
     if(cfg.max)body.max_tokens=Number(cfg.max);if(cfg.json)body.response_format={type:"json_object"};
     if(["openai","openrouter","orfree","groq","free"].includes(cfg.prov))body.stream_options={include_usage:true};
     await streamTo(await post(body),x,upd);
@@ -490,7 +570,10 @@ async function toApi(list){
 }
 async function send(){
  if(ctrl){ctrl.abort();return}
- const inp=$("#in");const text=inp.value.trim();if(!text&&!pending.length)return;
+ const inp=$("#in");let text=inp.value.trim();
+ const sc=text.match(/^\/(plan|build|explore)\b\s*/i);
+ if(sc){cfg.ocMode=sc[1].toLowerCase();store.set("tt_cfg",cfg);text=text.slice(sc[0].length).trim();render()}
+ if(!text&&!pending.length)return;
  if(!cfg.key&&cfg.prov!=="ollama"&&cfg.prov!=="free"){openSettings();return}
  const c=getChat()||newChat();
  const um={role:"user",content:text};if(pending.length){um.files=pending;pending=[];renderAtts()}
@@ -522,9 +605,13 @@ function openSettings(){
  p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=kmap[shown]||"";$("#model").value=cfg.model;$("#sys").value=cfg.sys;
  const fl=FREELIST[cfg.prov]||FREE.models;fillFree(fl,isFree(cfg.prov)?cfg.model:fl[0].id);syncProvUI();
  $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;$("#max").value=cfg.max||"";$("#tools").checked=!!cfg.tools;$("#img").value=cfg.img||"";$("#json").checked=!!cfg.json;$("#autot").checked=!!cfg.autot;$("#multiOn").checked=!!cfg.multiOn;$("#multi").value=cfg.multi||"";
+ $("#ocMode").value=cfg.ocMode||"build";$("#ocModel").value=cfg.ocModel||"";$("#ocExtra").value=cfg.ocExtra||"";syncOcSeg();
  $("#dlg").showModal();
 }
 $("#temp").oninput=e=>$("#tv").textContent=e.target.value;
+$("#ocMode").onchange=e=>{cfg.ocMode=e.target.value;store.set("tt_cfg",cfg);syncOcSeg();render()};
+document.querySelectorAll("#ocSeg [data-ocm]").forEach(b=>b.onclick=()=>{$("#ocMode").value=b.dataset.ocm;$("#ocMode").dispatchEvent(new Event("change"))});
+$("#ocModeBtn").onclick=()=>{const ks=Object.keys(OC_MODES);cfg.ocMode=ks[(ks.indexOf(cfg.ocMode)+1)%ks.length];store.set("tt_cfg",cfg);render()};
 $("#prov").onchange=e=>{kmap[shown]=$("#key").value.trim();shown=e.target.value;$("#key").value=kmap[shown]||"";const v=PROVIDERS[shown];$("#url").value=v.u;$("#model").value=v.m;$("#models").innerHTML="";if(isFree(shown)){fillFree(FREELIST[shown],FREELIST[shown][0].id);$("#getModels").click()}syncProvUI()};
 $("#getModels").onclick=async()=>{
  const b=$("#getModels");b.textContent="جارٍ الجلب…";
@@ -544,7 +631,7 @@ $("#getModels").onclick=async()=>{
  }catch{b.textContent="تعذّر الجلب. أدخل اسم النموذج يدوياً."}
  setTimeout(()=>b.textContent="جلب قائمة النماذج",3500);
 };
-$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:isFree(prov)?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked,img:$("#img").value.trim(),json:$("#json").checked,autot:$("#autot").checked,multiOn:$("#multiOn").checked,multi:$("#multi").value.trim()};store.set("tt_cfg",cfg);$("#dlg").close();render()};
+$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:isFree(prov)?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked,img:$("#img").value.trim(),json:$("#json").checked,autot:$("#autot").checked,multiOn:$("#multiOn").checked,multi:$("#multi").value.trim(),ocMode:$("#ocMode").value,ocModel:$("#ocModel").value.trim(),ocExtra:$("#ocExtra").value.trim()};store.set("tt_cfg",cfg);$("#dlg").close();render()};
 $("#cancel").onclick=()=>$("#dlg").close();
 $("#openSet").onclick=()=>{openSettings();closeSide()};
 $("#new").onclick=()=>{if(!ctrl)newChat()};
@@ -599,6 +686,67 @@ $("#clearAll").onclick=()=>{if(ctrl)return;if(confirm("حذف كل المحاد�
 const closeSide=()=>{$("#side").classList.remove("open");$("#scrim").classList.remove("on")};
 $("#menu").onclick=()=>{$("#side").classList.add("open");$("#scrim").classList.add("on")};
 $("#scrim").onclick=closeSide;
+/* ===== البروكسي: مكوّن أصلي في APK (OkHttp) + بوابات في المتصفح ===== */
+const parseProxyLines=txt=>(txt||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(line=>{
+ const p=line.split(":");
+ if(p.length<2||!p[0]||!/^\d+$/.test(p[1])||+p[1]<1||+p[1]>65535)return null;
+ return {host:p[0],port:+p[1],user:p[2]||"",pass:p[3]||"",type:(p[4]||"http").toLowerCase()==="socks"?"socks":"http"};
+}).filter(Boolean);
+let px=Object.assign({enabled:false,mode:"failover",list:"",gate:""},store.get("tt_proxy",{}));
+let pxRR=0;
+const PX=(()=>{try{
+ if(!window.Capacitor||typeof window.Capacitor.isNativePlatform!=="function"||!window.Capacitor.isNativePlatform())return null;
+ return window.Capacitor.registerPlugin("ProxyRouter")||null;
+}catch(e){return null}})();
+const pxEntries=()=>parseProxyLines(px.list);
+const pxSetDot=c=>{$("#proxyDot").className=c||""};
+async function pxApply(){
+ const entries=pxEntries();store.set("tt_proxy",px);
+ if(PX){try{await PX.setConfig({enabled:!!px.enabled&&entries.length>0,mode:px.mode,entries:JSON.stringify(entries)})}catch(e){pxSetDot("err")}}
+ pxSetDot(px.enabled&&entries.length?"on":"");await pxStatus();
+}
+async function pxStatus(){
+ const box=$("#pxStatus");if(!box)return;
+ if(PX){try{const r=await PX.getStatus();
+  box.textContent=`مفعّل: ${r.enabled?"نعم":"لا"}\nالاستراتيجية: ${r.mode}\nالبروكسيات: ${r.count}\nالنشط: ${r.active||"—"}\nالطلبات: ${r.requests} · الإخفاقات: ${r.failures}\nآخر زمن: ${r.lastLatency>=0?r.lastLatency+"ms":"—"}`;
+  pxSetDot(r.enabled?"on":"");return}catch(e){box.textContent="تعذّر قراءة حالة البروكسي الأصلي: "+e}}
+ box.textContent=px.enabled?`${pxEntries().length} بروكسي محفوظ — وضع المتصفح (بوابات {url}).`:"البروكسي معطّل.";
+}
+async function pxTest(){
+ const list=pxEntries();if(!list.length){$("#pxStatus").textContent="أضف بروكسياً صالحاً أولاً.";return}
+ const b=$("#pxTest");b.textContent="جارٍ الاختبار…";const out=[];
+ if(PX){for(const e of list){try{const r=await PX.testProxy(e);out.push(`${r.label}: ${r.ok?"OK "+r.status:"فشل "+(r.error||"")} · ${r.latencyMs>=0?r.latencyMs+"ms":"—"}`)}catch(err){out.push(`${e.host}:${e.port}: ${err}`)}}}
+ else{
+  const gates=(px.gate||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!gates.length){out.push("لا توجد بوابات؛ الاختبار المباشر غير متاح من المتصفح بسبب CORS.")}
+  else for(const t of gates){const target="https://www.google.com/generate_204";const u=t.includes("{raw}")?target:encodeURIComponent(target);
+   try{const r=await fetch(t.replace("{url}",u).replace("{raw}",target));out.push(`${t}: ${r.status}`)}catch(err){out.push(`${t}: ${err}`)}}
+ }
+ $("#pxStatus").textContent=out.join("\n");b.textContent="اختبار البروكسيات";
+}
+function openProxy(){
+ $("#pxOn").checked=!!px.enabled;$("#pxMode").value=px.mode||"failover";$("#pxList").value=px.list||"";$("#pxGate").value=px.gate||"";
+ pxStatus();$("#proxyDlg").showModal();
+}
+$("#openProxy").onclick=()=>{openProxy();closeSide()};
+$("#pxCancel").onclick=()=>$("#proxyDlg").close();
+$("#pxSave").onclick=async()=>{px={enabled:$("#pxOn").checked,mode:$("#pxMode").value,list:$("#pxList").value.trim(),gate:$("#pxGate").value.trim()};await pxApply();$("#proxyDlg").close()};
+$("#pxTest").onclick=pxTest;
+$("#pxReset").onclick=async()=>{if(PX){try{await PX.resetStats()}catch{}}pxStatus()};
+/* بوابات المتصفح: تُطبَّق فقط إذا لم يكن المكوّن الأصلي موجوداً */
+const baseFetch=window.fetch.bind(window);
+window.fetch=function(input,init){
+ try{
+  const u=typeof input==="string"?input:(input&&input.url)||"";
+  if(!px.enabled||PX||!/^https?:\/\//i.test(u)||u.indexOf(location.origin)===0)return baseFetch(input,init);
+  const gates=(px.gate||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!gates.length)return baseFetch(input,init);
+  const t=gates[pxRR++%gates.length];
+  const uu=t.includes("{raw}")?u:encodeURIComponent(u);
+  return baseFetch(t.replace("{url}",uu).replace("{raw}",u),init);
+ }catch(e){return baseFetch(input,init)}
+};
+pxApply();
 if(!getChat())cur=chats[0]?.id||null;
 render();
 </script>

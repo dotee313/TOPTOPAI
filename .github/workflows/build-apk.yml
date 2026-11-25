@@ -24,8 +24,29 @@ jobs:
           mkdir -p www
           cp index.html www/index.html
       - name: Add Android platform
+        run: npx cap add android
+      - name: Install in-app proxy router
         run: |
-          npx cap add android
+          DST=android/app/src/main/java/com/toptopai/app
+          mkdir -p "$DST"
+          cp android-native/MainActivity.java "$DST/MainActivity.java"
+          cp android-native/ProxyRouterPlugin.java "$DST/ProxyRouterPlugin.java"
+          cp android-native/ProxyWebViewClient.java "$DST/ProxyWebViewClient.java"
+          cp android-native/ProxyRouterState.java "$DST/ProxyRouterState.java"
+          python3 - <<'PY'
+          p = 'android/app/build.gradle'
+          s = open(p).read()
+          if 'okhttp3' not in s:
+              s += '\ndependencies {\n  implementation "com.squareup.okhttp3:okhttp:4.12.0"\n}\n'
+          open(p, 'w').write(s)
+          p = 'android/app/src/main/AndroidManifest.xml'
+          s = open(p).read()
+          if 'usesCleartextTraffic' not in s:
+              s = s.replace('<application ', '<application android:usesCleartextTraffic="true" ', 1)
+          open(p, 'w').write(s)
+          PY
+      - name: Generate icons and sync
+        run: |
           npx --yes @capacitor/assets@3 generate --android
           npx cap sync android
       - name: Build debug APK
@@ -44,4 +65,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest TOPTOPAI.apk --title "TOPTOPAI APK" --notes "Latest build"
+          gh release create latest TOPTOPAI.apk --title "TOPTOPAI APK" --notes "OpenCode agent + in-app proxy router. Direct APK: https://github.com/dotee313/TOPTOPAI/releases/download/latest/TOPTOPAI.apk"
