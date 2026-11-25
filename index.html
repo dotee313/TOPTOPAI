@@ -121,6 +121,7 @@ dialog#dlg{max-height:90vh;overflow:auto}
 .pk{font-size:12.5px;color:var(--accent)}
 /* OpenCode */
 .ocico{width:19px;height:19px;vertical-align:-4px;margin-inline-end:5px;flex-shrink:0}
+.ocHero{width:72px;height:72px;margin-bottom:14px}
 .agent.oc{background:linear-gradient(135deg,#151A2E,#241B3A);border-color:#4B3B7A;color:#F2EDFF}
 .agent.oc span{color:#B9A9E8}
 .agent.oc b{color:#fff}
@@ -264,35 +265,28 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v)
 let cfg=Object.assign({prov:"openrouter",url:PROVIDERS.openrouter.u,key:"",model:PROVIDERS.openrouter.m,sys:"",temp:0.7,ocMode:"build",ocModel:"",ocExtra:""},store.get("tt_cfg",{}));
 cfg.keys=cfg.keys||{[cfg.prov]:cfg.key||""};
 let pending=[];
-let draftAgent=store.get("tt_agent","general");
+let draftAgent="opencode";store.set("tt_agent",draftAgent);
 let chats=store.get("tt_chats",[]);
 let cur=store.get("tt_cur",null);
 let ctrl=null;
 
 const AGENTS={
- general:{n:"مساعد عام",d:"أسئلة وأفكار ونقاش",p:"أنت مساعد ذكي ودود. أجب بنفس لغة المستخدم، بوضوح وباختصار."},
- coder:{n:"مبرمج",d:"كتابة الكود وإصلاح الأخطاء",p:"أنت مهندس برمجيات خبير. اكتب كوداً نظيفاً، واشرح الفكرة باختصار، ونبّه إلى الأخطاء والحالات الحدّية المحتملة."},
- translator:{n:"مترجم",d:"عربي ⇄ إنجليزي وغيرها",p:"أنت مترجم محترف. ترجم أي نص يرسله المستخدم بين العربية والإنجليزية (أو اللغة التي يحددها). أعد الترجمة وحدها دون شرح إلا إذا طُلب."},
- summarizer:{n:"ملخّص",d:"اختصار النصوص الطويلة",p:"لخّص ما يرسله المستخدم في نقاط قصيرة، ثم اختم بجملة خلاصة واحدة."},
- writer:{n:"كاتب",d:"صياغة وتحسين النصوص",p:"أنت كاتب محترف. حسّن الصياغة، واقترح عناوين ونصوصاً مقنعة بأسلوب سليم وسلس، وحافظ على المعنى."},
- tutor:{n:"معلّم",d:"شرح خطوة بخطوة",p:"أنت معلّم صبور. اشرح بخطوات بسيطة وأمثلة، ثم اطرح سؤالاً واحداً للتأكد من الفهم."},
- analyst:{n:"محلّل",d:"أرقام وأعمال وقرارات",p:"أنت محلل بيانات وأعمال. فكّر بالأرقام، اذكر افتراضاتك، وقدّم توصيات واضحة قابلة للتنفيذ."},
-  opencode:{n:"OpenCode",d:"وكيل برمجة: تخطيط، تنفيذ، استكشاف",p:"أنت وكيل برمجة مستوحى من OpenCode. تعمل على الملفات والكود الذي يرفقه المستخدم. اقرأ قبل أن تعدّل، واذكر المسار ورقم السطر عند الإشارة إلى موضع. اكتب كوداً كاملاً قابلاً للتنفيذ، بلا حذف باسم «الاختصار»، ولا تحذف ملفات دون تأكيد صريح. اشرح باختصار بعد كل خطوة، واستخدم الأدوات المتاحة عندما تكون مفيدة. أجب بلغة المستخدم."}
+ opencode:{n:"OpenCode",d:"وكيل برمجة: تخطيط، تنفيذ، استكشاف",p:"أنت وكيل برمجة مستوحى من OpenCode. تعمل على الملفات والكود الذي يرفقه المستخدم. اقرأ قبل أن تعدّل، واذكر المسار ورقم السطر عند الإشارة إلى موضع. اكتب كوداً كاملاً قابلاً للتنفيذ، بلا حذف باسم «الاختصار»، ولا تحذف ملفات دون تأكيد صريح. اشرح باختصار بعد كل خطوة، واستخدم الأدوات المتاحة عندما تكون مفيدة. أجب بلغة المستخدم."}
 };
 const OC_MODES={
  build:{n:"تنفيذ",p:"الوضع الحالي: build. نفّذ المطلوب مباشرةً على الكود المرفق، وأعطِ رداً موجزاً يوضّح ما تغيّر. لا تكتب خطة مطوّلة إلا إذا طلب المستخدم ذلك."},
  plan:{n:"تخطيط",p:"الوضع الحالي: plan. حلّل المطلوب أولاً، ثم اكتب خطة مرقّمة موجزة تشمل الملفات المتأثرة والنقاط الحرجة والاختبارات المقترحة. لا تكتب الكود النهائي قبل موافقة المستخدم."},
  explore:{n:"استكشاف",p:"الوضع الحالي: explore. استكشف الكود المرفق وارسم خريطة مختصرة للبنية والاعتماديات ونقاط الدخول، مع الإشارة إلى مسار الملف ورقم السطر. لا تعدّل أي شيء."}
 };
-const agentKey=c=>((c&&c.agent)||draftAgent)||"general";
+const agentKey=c=>{const k=(c&&c.agent)||draftAgent||"opencode";return AGENTS[k]?k:"opencode"};
 function agentPrompt(k){
- const base=(AGENTS[k]||AGENTS.general).p;
- if(k!=="opencode")return base;
+ const base=(AGENTS[k]||AGENTS.opencode).p;
  const m=OC_MODES[cfg.ocMode]||OC_MODES.build;
  return [base,m.p,"التاريخ اليوم: "+new Date().toISOString().slice(0,10),cfg.ocExtra||""].filter(Boolean).join("\n\n");
 }
 const ocOn=c=>agentKey(c)==="opencode";
 function syncOcSeg(){document.querySelectorAll("#ocSeg [data-ocm]").forEach(b=>b.classList.toggle("on",b.dataset.ocm===(cfg.ocMode||"build")))}
+function syncEmptySeg(){document.querySelectorAll(".empty [data-ocm]").forEach(b=>b.classList.toggle("on",b.dataset.ocm===(cfg.ocMode||"build")))}
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function inline(t){
  return esc(t).replace(/`([^`]+)`/g,"<code>$1</code>")
@@ -333,7 +327,7 @@ function md(src){
 const slim=c=>({...c,msgs:c.msgs.map(m=>m.files?{...m,files:m.files.map(f=>({type:f.type,mediaType:f.mediaType,filename:f.filename}))}:m)});
 const save=()=>{store.set("tt_chats",chats.map(slim));store.set("tt_cur",cur)};
 const getChat=()=>chats.find(c=>c.id===cur);
-const agentOf=c=>AGENTS[(c&&c.agent)||draftAgent]||AGENTS.general;
+const agentOf=c=>AGENTS[agentKey(c)];
 function newChat(){
  const e=getChat();if(e&&!e.msgs.length){closeSide();$("#in").focus();return e}
  const c={id:Date.now().toString(36),title:"محادثة جديدة",agent:draftAgent,msgs:[]};chats.unshift(c);cur=c.id;save();render();closeSide();$("#in").focus();return c;
@@ -379,7 +373,7 @@ function render(){
  $("#ocModeBtn").textContent="وضع: "+(OC_MODES[cfg.ocMode]||OC_MODES.build).n;
  if(!c||!c.msgs.length){
   const ready=cfg.key||cfg.prov==="ollama"||cfg.prov==="free";
-  w.innerHTML=`<div class="empty"><h1>كيف أساعدك اليوم؟</h1><p>${ready?"اختر مساعداً ثم اكتب رسالتك.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p><div class="agents">${Object.entries(AGENTS).map(([k,a])=>`<button class="agent${k==="opencode"?" oc":""}${(c?c.agent:draftAgent)===k?" on":""}" data-ag="${k}">${k==="opencode"?'<svg class="ocico"><use href="#ico-opencode"/></svg>':""}<b>${a.n}</b><span>${a.d}</span></button>`).join("")}</div></div>`;return}
+  w.innerHTML=`<div class="empty"><svg class="ocHero"><use href="#ico-opencode"/></svg><h1>OpenCode</h1><p>${ready?"وكيل برمجة بالتخطيط والتنفيذ والاستكشاف. اكتب طلبك، وبدّل الوضع من أعلى المحادثة.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p><div class="seg" style="justify-content:center"><button data-ocm="build">تنفيذ</button><button data-ocm="plan">تخطيط</button><button data-ocm="explore">استكشاف</button></div></div>`;syncEmptySeg();return}
  c.msgs.forEach((m,i)=>bubble(m,false,i===c.msgs.length-1&&m.role!=="user",i));scrollDown();
 }
 const scrollDown=()=>{const m=$("#msgs");m.scrollTop=m.scrollHeight};
@@ -660,10 +654,10 @@ $("#box").addEventListener("drop",e=>{e.preventDefault();addFiles([...e.dataTran
 $("#in").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing&&innerWidth>760){e.preventDefault();send()}});
 $("#in").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,180)+"px"});
 $("#wrap").addEventListener("click",e=>{
+ const om=e.target.closest(".empty [data-ocm]");
+ if(om){cfg.ocMode=om.dataset.ocm;store.set("tt_cfg",cfg);syncEmptySeg();render();return}
  const cp=e.target.closest("[data-c]");
  if(cp){navigator.clipboard?.writeText(cp.parentElement.querySelector("code").textContent);cp.textContent="تم النسخ";setTimeout(()=>cp.textContent="نسخ",1200);return}
- const ag=e.target.closest("[data-ag]");
- if(ag){draftAgent=ag.dataset.ag;store.set("tt_agent",draftAgent);const c=getChat();if(c&&!c.msgs.length){c.agent=draftAgent;save()}render();$("#in").focus();return}
  const a=e.target.closest("[data-a]");
  if(a){
   if(a.dataset.a==="redo")redo();
@@ -754,6 +748,7 @@ window.fetch=function(input,init){
  }catch(e){return baseFetch(input,init)}
 };
 pxApply();
+chats.forEach(c=>{if(c.agent!=="opencode")c.agent="opencode"});
 if(!getChat())cur=chats[0]?.id||null;
 render();
 </script>
