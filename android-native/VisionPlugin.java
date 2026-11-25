@@ -18,7 +18,7 @@ import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.label.ImageLabel;
 import com.google.mlkit.vision.label.ImageLabeler;
 import com.google.mlkit.vision.label.ImageLabeling;
-import com.google.mlkit.vision.label.ImageLabelerOptions;
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
@@ -107,7 +107,7 @@ public class VisionPlugin extends Plugin {
                 for (Barcode code : codes) {
                     JSONObject item = new JSONObject();
                     String raw = code.getRawValue() == null ? "" : code.getRawValue();
-                    String url = code.getUrl() == null ? "" : code.getUrl();
+                    String url = code.getUrl() == null ? "" : code.getUrl().getUrl();
                     item.put("raw", raw);
                     item.put("url", url);
                     item.put("format", code.getFormat());
