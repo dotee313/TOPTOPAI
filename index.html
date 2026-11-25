@@ -738,7 +738,13 @@ const baseFetch=window.fetch.bind(window);
 window.fetch=function(input,init){
  try{
   const u=typeof input==="string"?input:(input&&input.url)||"";
-  if(!px.enabled||PX||!/^https?:\/\//i.test(u)||u.indexOf(location.origin)===0)return baseFetch(input,init);
+  if(!px.enabled||!/^https?:\/\//i.test(u)||u.indexOf(location.origin)===0)return baseFetch(input,init);
+  if(PX){
+   const headers={};const ih=(init&&init.headers)||{};
+   if(typeof ih.forEach==="function")ih.forEach((v,k)=>headers[k]=v);else Object.keys(ih).forEach(k=>headers[k]=ih[k]);
+   const body=(init&&typeof init.body==="string")?init.body:"";
+   return PX.request({url:u,method:(init&&init.method)||"GET",headers,body}).then(r=>new Response(r.body||"",{status:r.status||200,headers:r.headers||{}}));
+  }
   const gates=(px.gate||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   if(!gates.length)return baseFetch(input,init);
   const t=gates[pxRR++%gates.length];

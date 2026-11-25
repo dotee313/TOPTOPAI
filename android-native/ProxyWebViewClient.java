@@ -9,16 +9,12 @@ import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeWebViewClient;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 import okhttp3.Headers;
-import okhttp3.MediaType;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
@@ -58,20 +54,10 @@ public class ProxyWebViewClient extends BridgeWebViewClient {
                 hb.add(k, h.getValue());
             }
             String method = request.getMethod() == null ? "GET" : request.getMethod();
-            RequestBody body = null;
-            if (!"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)) {
-                byte[] data = readAll(request.getPostData());
-                String ct = request.getRequestHeaders().get("Content-Type");
-                MediaType mt = null;
-                if (ct != null && !ct.isEmpty()) {
-                    try {
-                        mt = MediaType.parse(ct);
-                    } catch (Exception ignored) {
-                    }
-                }
-                body = RequestBody.create(data, mt);
-            }
-            rb.headers(hb.build()).method(method, body);
+            // POST bodies are not part of Android's public WebResourceRequest API.
+            // The JS fetch shim sends those through the ProxyRouter.request plugin method.
+            if (!"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)) return null;
+            rb.headers(hb.build()).method(method, null);
 
             Response r = state.execute(rb.build());
             for (String name : r.headers().names()) {
@@ -90,15 +76,5 @@ public class ProxyWebViewClient extends BridgeWebViewClient {
             return new WebResourceResponse("text/plain", "utf-8", 502, "Bad Gateway",
                     outHeaders, new ByteArrayInputStream(err));
         }
-    }
-
-    private static byte[] readAll(InputStream in) throws Exception {
-        if (in == null) return new byte[0];
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buf = new byte[16384];
-        int n;
-        while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-        in.close();
-        return out.toByteArray();
     }
 }
