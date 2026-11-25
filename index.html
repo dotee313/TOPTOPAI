@@ -740,6 +740,7 @@ window.fetch=function(input,init){
   const u=typeof input==="string"?input:(input&&input.url)||"";
   if(!px.enabled||!/^https?:\/\//i.test(u)||u.indexOf(location.origin)===0)return baseFetch(input,init);
   if(PX){
+   if(init&&init.body&&typeof init.body!=="string")return baseFetch(input,init);
    const headers={};const ih=(init&&init.headers)||{};
    if(typeof ih.forEach==="function")ih.forEach((v,k)=>headers[k]=v);else Object.keys(ih).forEach(k=>headers[k]=ih[k]);
    const body=(init&&typeof init.body==="string")?init.body:"";
