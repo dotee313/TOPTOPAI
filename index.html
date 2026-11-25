@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0E7C86">
-<title>TOPTOPAI</title>
+<title>TOPTOPAI — OpenCode</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -150,7 +150,7 @@ dialog#dlg{max-height:90vh;overflow:auto}
   </symbol>
 </svg>
 <aside id="side" aria-label="المحادثات">
-  <header><span class="brand">TOP<b>TOP</b>AI</span></header>
+  <header><span class="brand">TOP<b>TOP</b>AI <small>OpenCode</small></span></header>
   <button id="new" class="btn">محادثة جديدة</button>
   <input id="q" class="f" dir="rtl" placeholder="بحث في المحادثات" style="margin:0 16px 8px;width:calc(100% - 32px);direction:rtl;text-align:start">
   <nav id="list"></nav>
@@ -162,9 +162,8 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <div id="msgs"><div class="wrap" id="wrap"></div></div>
   <div id="bar"><div id="atts"></div><div id="box">
     <button id="attach" type="button" aria-label="إرفاق ملف أو صورة" title="إرفاق ملف أو صورة">📎</button>
-    <button id="mic" type="button" aria-label="إملاء صوتي" title="إملاء صوتي (OpenAI/Groq)">🎤</button>
     <input id="file" type="file" multiple hidden accept="image/*,application/pdf,text/*,.md,.json,.csv,.js,.ts,.py,.html,.css,.xml,.yml,.yaml,.java,.c,.cpp,.cs,.go,.rs,.php,.sh,.sql">
-    <textarea id="in" rows="1" placeholder="اكتب رسالتك… (/image وصف لتوليد صورة)" aria-label="الرسالة"></textarea>
+    <textarea id="in" rows="1" placeholder="اكتب طلبك لـ OpenCode… (/plan أو /build أو /explore)" aria-label="الرسالة"></textarea>
     <button id="send" aria-label="إرسال">↑</button>
   </div></div>
 </main>
@@ -179,45 +178,24 @@ dialog#dlg{max-height:90vh;overflow:auto}
   <div class="row"><button class="btn ghost" id="moreClose">إغلاق</button></div>
 </dialog>
 <dialog id="dlg">
-  <h2>الإعدادات</h2>
-  <label for="prov">المزوّد</label>
-  <select id="prov" class="f"></select>
-  <label for="url">عنوان API</label>
-  <input id="url" class="f" autocomplete="off">
-  <label for="key" id="keyLbl">مفتاح API</label>
-  <input id="key" class="f" type="password" autocomplete="off" placeholder="sk-…">
-  <div id="modelBox"><label for="model">النموذج</label>
-  <input id="model" class="f" autocomplete="off" list="models">
-  <datalist id="models"></datalist></div>
-  <div id="freeBox" hidden><label for="freeSel">النموذج المجاني</label>
-  <select id="freeSel" class="f"></select>
-  <div class="warn-box">⚠️ النماذج المجانية قد تكون لها حدود استخدام (عدد الطلبات/الحجم) وشروط خدمة خاصة بالمزوّد، وقد تتغير أو تُسحب في أي وقت. قد تطلب البوابة مفتاح AI Gateway (يُنشأ مجاناً من حسابك في Vercel) ويُدخل في حقل المفتاح أعلاه. مفاتيحك الأخرى (OpenAI وغيرها) تبقى محفوظة منفصلة ولا تُرسل إلى هذه البوابة. النماذج غير المدمجة قد لا تدعم الصور. عند اختيار «OpenRouter — نماذج مجانية» أدخل مفتاح OpenRouter (التسجيل مجاني). زر «جلب قائمة النماذج» يحدّث القائمة بالنماذج المجانية المتاحة فعلاً الآن.</div></div>
-  <div style="margin-top:6px"><button class="btn ghost sm" id="getModels" type="button">جلب قائمة النماذج</button></div>
-  <label for="temp">الإبداعية (0 دقيق ← 2 مبدع): <span id="tv"></span></label>
-  <input id="temp" class="f" type="range" min="0" max="2" step="0.1">
-  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="multiOn" type="checkbox"> وضع المقارنة: تشغيل حتى 3 نماذج معاً (بلا أدوات)</label>
-  <input id="multi" class="f" placeholder="نماذج مفصولة بفواصل (فارغ في الوضع المجاني = أول 3 نماذج)">
-  <label for="img">نموذج توليد الصور (للأمر /image — OpenAI أو Gemini)</label>
-  <input id="img" class="f" placeholder="gpt-image-1">
-  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="json" type="checkbox"> وضع JSON (يجب أن يذكر طلبك كلمة JSON)</label>
-  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="autot" type="checkbox"> عنوان تلقائي للمحادثة (طلب إضافي صغير)</label>
-  <fieldset class="ocbox"><legend><svg class="ocico"><use href="#ico-opencode"/></svg>خيارات OpenCode</legend>
+  <h2>إعدادات OpenCode</h2>
+  <div class="hint">هذا التطبيق مخصص لـ OpenCode وحده؛ لا يوجد مزوّد أو مفتاح API تُدخله. يعمل مباشرة عبر نموذج مدمج متاح للجميع، وقد تكون له حدود استخدام.</div>
+  <fieldset class="ocbox"><legend><svg class="ocico"><use href="#ico-opencode"/></svg>خيارات الوكيل</legend>
     <label for="ocMode">الوضع</label>
     <select id="ocMode" class="f"><option value="build">تنفيذ (Build)</option><option value="plan">تخطيط (Plan)</option><option value="explore">استكشاف (Explore)</option></select>
-    <label for="ocModel">نموذج مخصص لـ OpenCode (اختياري)</label>
-    <input id="ocModel" class="f" dir="ltr" placeholder="مثال: qwen2.5-coder:32b">
+    <label for="ocModel">تجاوز النموذج (اختياري، للمستخدم المتقدم)</label>
+    <input id="ocModel" class="f" dir="ltr" placeholder="افتراضي: openai-fast">
     <label for="ocExtra">تعليمات إضافية للوكيل</label>
     <textarea id="ocExtra" class="f" placeholder="مثال: لا تستخدم مكتبات خارجية، واكتب تعليقات بالعربية."></textarea>
     <div class="seg" id="ocSeg"><button data-ocm="build">تنفيذ</button><button data-ocm="plan">تخطيط</button><button data-ocm="explore">استكشاف</button></div>
-    <div class="hint">اختصارات سريعة في المحادثة: <code>/plan</code> <code>/build</code> <code>/explore</code>. النموذج المخصص يُطبَّق فقط عند اختيار مساعد OpenCode.</div>
+    <div class="hint">اختصارات سريعة في المحادثة: <code>/plan</code> <code>/build</code> <code>/explore</code>.</div>
   </fieldset>
+  <label for="temp">الإبداعية (0 دقيق ← 2 مبدع): <span id="tv"></span></label>
+  <input id="temp" class="f" type="range" min="0" max="2" step="0.1">
   <label for="max">أقصى طول للرد بالتوكن (اختياري)</label>
   <input id="max" class="f" type="number" min="1" placeholder="مثال: 2000">
-  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="tools" type="checkbox"> تفعيل الأدوات: طقس، حاسبة، الوقت، ويكيبيديا (يتطلب نموذجاً يدعم tool calling)</label>
-  <label for="sys">تعليمات النظام (اختياري)</label>
-  <textarea id="sys" class="f" placeholder="مثال: أجب بالعربية وباختصار."></textarea>
-  <div class="hint links">احصل على مفتاح: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a><a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini</a></div>
-  <div class="hint">يُحفظ المفتاح في هذا المتصفح فقط، ويُرسل مباشرة إلى المزوّد الذي تختاره.</div>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="tools" type="checkbox"> تفعيل الأدوات: طقس، حاسبة، الوقت، ويكيبيديا، التحقق من JSON</label>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input id="autot" type="checkbox"> عنوان تلقائي للمحادثة (طلب إضافي صغير)</label>
   <div class="row"><button class="btn ghost" id="cancel">إغلاق</button><button class="btn" id="save">حفظ</button></div>
 </dialog>
 
@@ -245,25 +223,11 @@ dialog#dlg{max-height:90vh;overflow:auto}
 
 <script>
 const $=s=>document.querySelector(s);
-const FREE={url:"https://ai-gateway.vercel.sh/v1",models:[
- {id:"minimax/minimax-m3-free",n:"MiniMax M3 (مجاني)"},
- {id:"nvidia/nemotron-3.5-lightning-free",n:"NVIDIA Nemotron 3.5 Lightning (مجاني)"}
-]};
-const OR_FREE=[{id:"deepseek/deepseek-r1:free",n:"DeepSeek R1 (مجاني)"},{id:"meta-llama/llama-3.3-70b-instruct:free",n:"Llama 3.3 70B (مجاني)"},{id:"google/gemini-2.0-flash-exp:free",n:"Gemini 2.0 Flash Exp (مجاني)"}];
-const FREELIST={free:FREE.models,orfree:OR_FREE};const isFree=p=>p in FREELIST;
-const PROVIDERS={
- openai:{n:"OpenAI",u:"https://api.openai.com/v1",m:"gpt-4o-mini"},
- openrouter:{n:"OpenRouter (نماذج كثيرة)",u:"https://openrouter.ai/api/v1",m:"openai/gpt-4o-mini"},
- groq:{n:"Groq",u:"https://api.groq.com/openai/v1",m:"llama-3.3-70b-versatile"},
- gemini:{n:"Google Gemini",u:"https://generativelanguage.googleapis.com/v1beta/openai",m:"gemini-2.0-flash"},
- ollama:{n:"Ollama (محلي)",u:"http://localhost:11434/v1",m:"llama3.2"},
- free:{n:"نماذج مجانية (Vercel AI Gateway)",u:FREE.url,m:FREE.models[0].id},
- orfree:{n:"OpenRouter — نماذج مجانية (:free)",u:"https://openrouter.ai/api/v1",m:OR_FREE[0].id},
- custom:{n:"مخصص (متوافق مع OpenAI)",u:"",m:""}
-};
+const BUILTIN={url:"https://text.pollinations.ai/openai",model:"openai-fast"};
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-let cfg=Object.assign({prov:"openrouter",url:PROVIDERS.openrouter.u,key:"",model:PROVIDERS.openrouter.m,sys:"",temp:0.7,ocMode:"build",ocModel:"",ocExtra:""},store.get("tt_cfg",{}));
-cfg.keys=cfg.keys||{[cfg.prov]:cfg.key||""};
+let cfg=Object.assign({prov:"builtin",url:BUILTIN.url,key:"",model:BUILTIN.model,sys:"",temp:0.7,max:0,tools:true,autot:true,ocMode:"build",ocModel:"",ocExtra:""},store.get("tt_cfg",{}));
+// نسخة OpenCode خالصة: لا مفاتيح ولا مزوّدين قابلة للاختيار، حتى مع إعدادات قديمة محفوظة.
+Object.assign(cfg,{prov:"builtin",url:BUILTIN.url,key:"",model:BUILTIN.model,sys:"",json:false,multiOn:false,multi:"",img:""});
 let pending=[];
 let draftAgent="opencode";store.set("tt_agent",draftAgent);
 let chats=store.get("tt_chats",[]);
@@ -372,8 +336,7 @@ function render(){
  $("#ocModeBtn").hidden=!ocOn(c);
  $("#ocModeBtn").textContent="وضع: "+(OC_MODES[cfg.ocMode]||OC_MODES.build).n;
  if(!c||!c.msgs.length){
-  const ready=cfg.key||cfg.prov==="ollama"||cfg.prov==="free";
-  w.innerHTML=`<div class="empty"><svg class="ocHero"><use href="#ico-opencode"/></svg><h1>OpenCode</h1><p>${ready?"وكيل برمجة بالتخطيط والتنفيذ والاستكشاف. اكتب طلبك، وبدّل الوضع من أعلى المحادثة.":"أضف مفتاح API من الإعدادات لتبدأ المحادثة."}</p><div class="seg" style="justify-content:center"><button data-ocm="build">تنفيذ</button><button data-ocm="plan">تخطيط</button><button data-ocm="explore">استكشاف</button></div></div>`;syncEmptySeg();return}
+  w.innerHTML=`<div class="empty"><svg class="ocHero"><use href="#ico-opencode"/></svg><h1>OpenCode</h1><p>وكيل برمجة يعمل مباشرة بلا مفتاح API. اكتب طلبك، وبدّل الوضع من أعلى المحادثة أو باختصارات <code>/plan</code> و<code>/build</code> و<code>/explore</code>.</p><div class="seg" style="justify-content:center"><button data-ocm="build">تنفيذ</button><button data-ocm="plan">تخطيط</button><button data-ocm="explore">استكشاف</button></div></div>`;syncEmptySeg();return}
  c.msgs.forEach((m,i)=>bubble(m,false,i===c.msgs.length-1&&m.role!=="user",i));scrollDown();
 }
 const scrollDown=()=>{const m=$("#msgs");m.scrollTop=m.scrollHeight};
@@ -394,14 +357,14 @@ const TOOL_DEFS=Object.entries(TOOLS).map(([name,t])=>({type:"function",function
 const toolHtml=t=>`<details class="tool"><summary>🔧 ${esc(t.name)}</summary><pre><code>${esc(JSON.stringify(t.args)+"\n→ "+(t.result===undefined?"…":JSON.stringify(t.result)))}</code></pre></details>`;
 const bodyHtml=m=>m.multi?m.multi.map((x,k)=>`<div class="mcard${m.pick===k?" on":""}${x.err?" err":""}"><div class="mh"><b>${esc(x.model)}</b>${x.usage?`<span>↑${x.usage.p} ↓${x.usage.c}</span>`:""}</div>${x.err?esc(x.err):bodyHtml(x)}${!m.live&&!x.err&&x.content?(m.pick===k?'<span class="pk">✓ المعتمد في سياق المحادثة</span>':`<button class="pk" data-a="pick" data-k="${k}">اعتمد هذا الرد</button>`):""}</div>`).join(""):(m.reasoning?`<details class="think"${m.content?"":" open"}><summary>🧠 التفكير</summary><div>${esc(m.reasoning)}</div></details>`:"")+(m.tools||[]).map(toolHtml).join("")+md(m.content||"");
 async function post(body){
- for(let a=0;;a++){
-  const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",signal:ctrl.signal,
-   headers:{"Content-Type":"application/json",...(cfg.key?{Authorization:"Bearer "+cfg.key}:{})},body:JSON.stringify(body)});
-  if((r.status===429||r.status>=500)&&a<2){await new Promise(x=>setTimeout(x,1000*2**a));continue}
-  if(!r.ok){let t="";try{const j=await r.json();t=j.error?.message||j[0]?.error?.message||""}catch{}
-   throw new Error(r.status===401?(cfg.prov==="free"?"هذه البوابة تتطلب مفتاح AI Gateway. أنشئ مفتاحاً مجانياً من حسابك في Vercel وأدخله في الإعدادات، أو استخدم مفتاحك الخاص مع مزوّد آخر.":"المفتاح غير صحيح أو منتهي. راجع الإعدادات."):r.status===429?(cfg.prov==="free"?"وصلت إلى حد استخدام النماذج المجانية. انتظر قليلاً أو جرّب نموذجاً آخر.":"تجاوزت الحد المسموح أو لا يوجد رصيد. جرّب لاحقاً أو غيّر النموذج."):`خطأ ${r.status}${t?": "+t:""}`)}
-  return r;
- }
+  for(let a=0;;a++){
+   const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",signal:ctrl.signal,
+    headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+   if((r.status===429||r.status>=500)&&a<2){await new Promise(x=>setTimeout(x,1000*2**a));continue}
+   if(!r.ok){let t="";try{const j=await r.json();t=j.error?.message||j[0]?.error?.message||""}catch{}
+    throw new Error(r.status===429?"وصلت إلى حد استخدام الخدمة المجانية. انتظر قليلاً ثم أعد المحاولة.":r.status>=500?"الخدمة المجانية مشغلة الآن. أعد المحاولة بعد قليل.":`خطأ ${r.status}${t?": "+t:""}`)}
+   return r;
+  }
 }
 async function run(c){
  const ai={role:"assistant",content:""};
@@ -418,8 +381,6 @@ async function run(c){
    const body={model:useModel,messages:api,stream:true,temperature:Number(cfg.temp)};
    if(cfg.max)body.max_tokens=Number(cfg.max);
    if(cfg.tools)body.tools=TOOL_DEFS;
-   if(cfg.json)body.response_format={type:"json_object"};
-   if(["openai","openrouter","groq","free"].includes(cfg.prov))body.stream_options={include_usage:true};
    const r=await post(body);
    const rd=r.body.getReader(),dec=new TextDecoder();let buf="",txt="";const calls={};
    for(;;){
@@ -457,59 +418,14 @@ async function run(c){
   else{c.msgs.push({role:"assistant",content:e instanceof TypeError?"تعذّر الاتصال. تحقق من الإنترنت ومن عنوان API.":e.message,err:true})}
  }finally{ctrl=null;setBusy(false);save();render()}
 }
-const hdr=()=>({"Content-Type":"application/json",...(cfg.key?{Authorization:"Bearer "+cfg.key}:{})});
+const hdr=()=>({"Content-Type":"application/json"});
 async function autoTitle(c){
- try{const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",headers:hdr(),body:JSON.stringify({model:cfg.model,max_tokens:24,stream:false,messages:[{role:"system",content:"Write a very short title (max 5 words) for this conversation, in the user's language. Output only the title."},{role:"user",content:(c.msgs[0].content||"").slice(0,300)}]})});
+ try{const r=await fetch(cfg.url.replace(/\/$/,"")+"/chat/completions",{method:"POST",headers:hdr(),body:JSON.stringify({model:cfg.ocModel||cfg.model,max_tokens:24,stream:false,messages:[{role:"system",content:"Write a very short title (max 5 words) for this conversation, in the user's language. Output only the title."},{role:"user",content:(c.msgs[0].content||"").slice(0,300)}]})});
   if(!r.ok)return;const t=((await r.json()).choices?.[0]?.message?.content||"").replace(/<think>[\s\S]*?<\/think>/g,"").replace(/["«»*#]/g,"").trim();
   if(t&&t.length<60){c.title=t;save();renderList();if(cur===c.id)$("#ttl").textContent=t}
  }catch{}
 }
-async function genImage(c,prompt){
- ctrl=new AbortController();setBusy(true);
- try{
-  const model=cfg.img||(cfg.prov==="gemini"?"imagen-3.0-generate-002":"gpt-image-1");
-  const body={model,prompt,n:1};if(!/^gpt-image/.test(model))body.response_format="b64_json";
-  const r=await fetch(cfg.url.replace(/\/$/,"")+"/images/generations",{method:"POST",signal:ctrl.signal,headers:hdr(),body:JSON.stringify(body)});
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(j.error?.message||j[0]?.error?.message||`خطأ ${r.status} — توليد الصور يحتاج مزوّداً ونموذجاً يدعمه (OpenAI أو Gemini).`);
-  const d=j.data?.[0];const url=d?.b64_json?"data:image/png;base64,"+d.b64_json:d?.url;if(!url)throw new Error("لم تصل صورة.");
-  c.msgs.push({role:"assistant",content:"🖼 "+prompt,files:[{type:"file",mediaType:"image/png",filename:"image.png",url}]});
- }catch(e){if(e.name!=="AbortError")c.msgs.push({role:"assistant",content:e instanceof TypeError?"تعذّر الاتصال.":e.message,err:true})}
- finally{ctrl=null;setBusy(false);save();render()}
-}
-const multiList=()=>{let l=(cfg.multi||"").split(",").map(x=>x.trim()).filter(Boolean);if(!l.length&&isFree(cfg.prov))l=FREELIST[cfg.prov].map(m=>m.id);return l.slice(0,3)};
-function go(c){const l=multiList();cfg.multiOn&&l.length>1?runMulti(c,l):run(c)}
-async function streamTo(r,x,upd){
- const rd=r.body.getReader(),dec=new TextDecoder();let buf="",raw="",rs="";
- const sync=()=>{const tg=[];x.content=raw.replace(/<think>([\s\S]*?)(?:<\/think>|$)/g,(_,t)=>{tg.push(t);return""}).trimStart();x.reasoning=(rs+tg.join("\n")).trim()||undefined};
- for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});const L=buf.split("\n");buf=L.pop();
-  for(const ln of L){const t=ln.trim();if(!t.startsWith("data:"))continue;const d=t.slice(5).trim();if(d==="[DONE]")continue;
-   try{const j=JSON.parse(d);if(j.usage)x.usage={p:j.usage.prompt_tokens||0,c:j.usage.completion_tokens||0};const dl=j.choices?.[0]?.delta;if(!dl)continue;rs+=dl.reasoning_content||dl.reasoning||"";raw+=dl.content||"";sync();upd()}catch{}}}
- sync();
-}
-async function runMulti(c,models){
- const ai={role:"assistant",content:"",live:true,multi:models.map(model=>({model,content:""}))};
- render();const el=bubble(ai,true);scrollDown();
- ctrl=new AbortController();setBusy(true);
- const sys=[agentPrompt(agentKey(c)),cfg.sys].filter(Boolean).join("\n\n");
- let raf=0;const upd=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;el.innerHTML=bodyHtml(ai);scrollDown()})};
- try{
-  const api=[{role:"system",content:sys},...await toApi(c.msgs.filter(m=>!m.err))];
-  await Promise.all(ai.multi.map(async x=>{
-   try{
-    const body={model:(ocOn(c)&&cfg.ocModel)?cfg.ocModel:x.model,messages:api,stream:true,temperature:Number(cfg.temp)};
-    if(cfg.max)body.max_tokens=Number(cfg.max);if(cfg.json)body.response_format={type:"json_object"};
-    if(["openai","openrouter","orfree","groq","free"].includes(cfg.prov))body.stream_options={include_usage:true};
-    await streamTo(await post(body),x,upd);
-   }catch(e){if(e.name!=="AbortError")x.err=e instanceof TypeError?"تعذّر الاتصال.":e.message}
-   upd();
-  }));
-  delete ai.live;const ok=ai.multi.findIndex(x=>x.content);
-  if(ok<0){if(ctrl.signal.aborted)return;throw new Error(ai.multi.find(x=>x.err)?.err||"لم يصل رد من أي نموذج.")}
-  ai.pick=ok;ai.content=ai.multi[ok].content;c.msgs.push(ai);
- }catch(e){c.msgs.push({role:"assistant",content:e.message,err:true})}
- finally{ctrl=null;setBusy(false);save();render()}
-}
+function go(c){return run(c)}
 function editMsg(i){
  const c=getChat();if(!c||ctrl)return;const m=c.msgs[i];
  const t=prompt("تعديل الرسالة",m.content);if(t===null||!t.trim())return;
@@ -568,12 +484,12 @@ async function send(){
  const sc=text.match(/^\/(plan|build|explore)\b\s*/i);
  if(sc){cfg.ocMode=sc[1].toLowerCase();store.set("tt_cfg",cfg);text=text.slice(sc[0].length).trim();render()}
  if(!text&&!pending.length)return;
- if(!cfg.key&&cfg.prov!=="ollama"&&cfg.prov!=="free"){openSettings();return}
+
  const c=getChat()||newChat();
  const um={role:"user",content:text};if(pending.length){um.files=pending;pending=[];renderAtts()}
  c.msgs.push(um);
  if(c.msgs.length===1)c.title=(text||um.files[0].filename||"مرفق").slice(0,40);
- inp.value="";inp.style.height="auto";save();if(/^\/image\s/i.test(text))genImage(c,text.replace(/^\/image\s+/i,""));else go(c);
+ inp.value="";inp.style.height="auto";save();go(c);
 }
 function redo(){
  const c=getChat();if(!c||ctrl)return;
@@ -582,67 +498,22 @@ function redo(){
 }
 const chatText=c=>`${c.title}\n\n`+c.msgs.map(m=>(m.role==="user"?"أنا: ":agentOf(c).n+": ")+m.content).join("\n\n");
 
-let kmap={},shown="";
-function fillFree(list,sel){
- const L=[...list];if(sel&&!L.some(m=>m.id===sel))L.unshift({id:sel,n:sel});
- $("#freeSel").innerHTML=L.map(m=>`<option value="${esc(m.id)}">${esc(m.n)}</option>`).join("");
- if(sel)$("#freeSel").value=sel;
-}
-function syncProvUI(){
- const free=isFree($("#prov").value);
- $("#freeBox").hidden=!free;$("#modelBox").hidden=free;
- $("#keyLbl").textContent=$("#prov").value==="free"?"مفتاح AI Gateway (اختياري إن قبلت الخدمة بدونه)":"مفتاح API";
-}
 function openSettings(){
- const p=$("#prov");p.innerHTML=Object.entries(PROVIDERS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join("");
- kmap={...(cfg.keys||{}),[cfg.prov]:cfg.key};shown=cfg.prov;
- p.value=cfg.prov;$("#url").value=cfg.url;$("#key").value=kmap[shown]||"";$("#model").value=cfg.model;$("#sys").value=cfg.sys;
- const fl=FREELIST[cfg.prov]||FREE.models;fillFree(fl,isFree(cfg.prov)?cfg.model:fl[0].id);syncProvUI();
- $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;$("#max").value=cfg.max||"";$("#tools").checked=!!cfg.tools;$("#img").value=cfg.img||"";$("#json").checked=!!cfg.json;$("#autot").checked=!!cfg.autot;$("#multiOn").checked=!!cfg.multiOn;$("#multi").value=cfg.multi||"";
- $("#ocMode").value=cfg.ocMode||"build";$("#ocModel").value=cfg.ocModel||"";$("#ocExtra").value=cfg.ocExtra||"";syncOcSeg();
- $("#dlg").showModal();
+  $("#temp").value=cfg.temp;$("#tv").textContent=cfg.temp;
+  $("#max").value=cfg.max||"";$("#tools").checked=!!cfg.tools;$("#autot").checked=!!cfg.autot;
+  $("#ocMode").value=cfg.ocMode||"build";$("#ocModel").value=cfg.ocModel||"";$("#ocExtra").value=cfg.ocExtra||"";
+  syncOcSeg();$("#dlg").showModal();
 }
 $("#temp").oninput=e=>$("#tv").textContent=e.target.value;
 $("#ocMode").onchange=e=>{cfg.ocMode=e.target.value;store.set("tt_cfg",cfg);syncOcSeg();render()};
 document.querySelectorAll("#ocSeg [data-ocm]").forEach(b=>b.onclick=()=>{$("#ocMode").value=b.dataset.ocm;$("#ocMode").dispatchEvent(new Event("change"))});
 $("#ocModeBtn").onclick=()=>{const ks=Object.keys(OC_MODES);cfg.ocMode=ks[(ks.indexOf(cfg.ocMode)+1)%ks.length];store.set("tt_cfg",cfg);render()};
-$("#prov").onchange=e=>{kmap[shown]=$("#key").value.trim();shown=e.target.value;$("#key").value=kmap[shown]||"";const v=PROVIDERS[shown];$("#url").value=v.u;$("#model").value=v.m;$("#models").innerHTML="";if(isFree(shown)){fillFree(FREELIST[shown],FREELIST[shown][0].id);$("#getModels").click()}syncProvUI()};
-$("#getModels").onclick=async()=>{
- const b=$("#getModels");b.textContent="جارٍ الجلب…";
- try{
-  const key=$("#key").value.trim();
-  const r=await fetch($("#url").value.trim().replace(/\/$/,"")+"/models",{headers:key?{Authorization:"Bearer "+key}:{}});
-  if(!r.ok)throw 0;const j=await r.json();
-  const ids=(j.data||j.models||[]).map(m=>(m.id||m.name||"").replace(/^models\//,"")).filter(Boolean).sort();
-  if(isFree($("#prov").value)){
-   const f=ids.filter(i=>/free/i.test(i));
-   fillFree(f.length?f.map(i=>({id:i,n:i})):FREELIST[$("#prov").value],$("#freeSel").value);
-   b.textContent=f.length?`تم جلب ${f.length} نموذجاً مجانياً`:"لم تظهر نماذج مجانية؛ بقيت القائمة الافتراضية";
-  }else{
-   $("#models").innerHTML=ids.map(i=>`<option value="${esc(i)}">`).join("");
-   b.textContent=ids.length?`تم جلب ${ids.length} نموذجاً، اضغط حقل النموذج`:"لا توجد نماذج";
-  }
- }catch{b.textContent="تعذّر الجلب. أدخل اسم النموذج يدوياً."}
- setTimeout(()=>b.textContent="جلب قائمة النماذج",3500);
-};
-$("#save").onclick=()=>{const prov=$("#prov").value;kmap[prov]=$("#key").value.trim();cfg={prov,url:$("#url").value.trim(),key:kmap[prov],keys:kmap,model:isFree(prov)?$("#freeSel").value:$("#model").value.trim(),sys:$("#sys").value.trim(),temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked,img:$("#img").value.trim(),json:$("#json").checked,autot:$("#autot").checked,multiOn:$("#multiOn").checked,multi:$("#multi").value.trim(),ocMode:$("#ocMode").value,ocModel:$("#ocModel").value.trim(),ocExtra:$("#ocExtra").value.trim()};store.set("tt_cfg",cfg);$("#dlg").close();render()};
+$("#save").onclick=()=>{cfg={prov:"builtin",url:BUILTIN.url,key:"",model:BUILTIN.model,sys:"",temp:$("#temp").value,max:$("#max").value,tools:$("#tools").checked,autot:$("#autot").checked,json:false,multiOn:false,multi:"",img:"",ocMode:$("#ocMode").value,ocModel:$("#ocModel").value.trim(),ocExtra:$("#ocExtra").value.trim()};store.set("tt_cfg",cfg);$("#dlg").close();render()};
 $("#cancel").onclick=()=>$("#dlg").close();
 $("#openSet").onclick=()=>{openSettings();closeSide()};
 $("#new").onclick=()=>{if(!ctrl)newChat()};
 $("#send").onclick=send;
-let mr=null;
-$("#mic").onclick=async()=>{
- if(mr){mr.stop();return}
- if(!["openai","groq"].includes(cfg.prov)){alert("الإملاء الصوتي يعمل مع OpenAI أو Groq (Whisper).");return}
- if(!cfg.key){openSettings();return}
- try{const st=await navigator.mediaDevices.getUserMedia({audio:true}),ch=[];mr=new MediaRecorder(st);
-  mr.ondataavailable=e=>ch.push(e.data);
-  mr.onstop=async()=>{st.getTracks().forEach(t=>t.stop());$("#mic").textContent="🎤";mr=null;
-   try{const fd=new FormData();fd.append("file",new Blob(ch,{type:ch[0]?.type||"audio/webm"}),"a.webm");fd.append("model",cfg.prov==="groq"?"whisper-large-v3-turbo":"whisper-1");
-    const r=await fetch(cfg.url.replace(/\/$/,"")+"/audio/transcriptions",{method:"POST",headers:{Authorization:"Bearer "+cfg.key},body:fd});
-    const j=await r.json();if(!r.ok||!j.text)throw 0;const i=$("#in");i.value+=(i.value?" ":"")+j.text;i.focus()}catch{alert("فشل تحويل الصوت إلى نص.")}};
-  mr.start();$("#mic").textContent="⏹"}catch{alert("لا يوجد إذن للميكروفون.")}
-};
+
 $("#exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(chats.map(slim),null,1)],{type:"application/json"}));a.download="toptopai-chats.json";a.click();$("#more").close()};
 $("#imp").onclick=()=>{const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=async()=>{try{const j=JSON.parse(await i.files[0].text());if(!Array.isArray(j))throw 0;const ids=new Set(chats.map(c=>c.id));chats=[...j.filter(c=>c&&c.id&&Array.isArray(c.msgs)&&!ids.has(c.id)),...chats];save();render()}catch{alert("ملف غير صالح")}};i.click();$("#more").close()};
 $("#q").oninput=renderList;
