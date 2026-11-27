@@ -25,7 +25,7 @@ jobs:
           cp index.html www/index.html
       - name: Add Android platform
         run: npx cap add android
-      - name: Install in-app router, browser and vision
+      - name: Install in-app router, browser, vision and share receiver
         run: |
           DST=android/app/src/main/java/com/toptopai/app
           mkdir -p "$DST"
@@ -35,6 +35,7 @@ jobs:
           cp android-native/ProxyRouterState.java "$DST/ProxyRouterState.java"
           cp android-native/VisionPlugin.java "$DST/VisionPlugin.java"
           cp android-native/InAppBrowserPlugin.java "$DST/InAppBrowserPlugin.java"
+          cp android-native/ShareReceivePlugin.java "$DST/ShareReceivePlugin.java"
           python3 - <<'PY'
           p = 'android/app/build.gradle'
           s = open(p).read()
@@ -52,6 +53,20 @@ jobs:
           s = open(p).read()
           if 'usesCleartextTraffic' not in s:
               s = s.replace('<application ', '<application android:usesCleartextTraffic="true" ', 1)
+          if 'android.intent.action.SEND_MULTIPLE' not in s:
+              filters = '''<intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+              </intent-filter>
+              <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+              </intent-filter>'''
+              idx = s.find('</activity>')
+              if idx != -1:
+                  s = s[:idx] + filters + s[idx:]
           open(p, 'w').write(s)
           PY
       - name: Generate icons and sync
@@ -74,4 +89,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest TOPTOPAI.apk --title "TOPTOPAI APK" --notes "OpenCode agent + in-app browser + on-device vision + proxy router. Direct APK: https://github.com/dotee313/TOPTOPAI/releases/download/latest/TOPTOPAI.apk"
+          gh release create latest TOPTOPAI.apk --title "TOPTOPAI APK" --notes "OpenCode + free no-key models + any-file attachments + Android share target + in-app browser + on-device vision + proxy router + instant wipe. Direct APK: https://github.com/dotee313/TOPTOPAI/releases/download/latest/TOPTOPAI.apk"
